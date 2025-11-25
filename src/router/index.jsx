@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { shopRoutes } from './ShopRoutes';
-import { authRoutes } from './AuthRoutes';
+import { ShopRoutes } from './ShopRoutes';
+import { AuthRoutes } from './AuthRoutes';
+import NotFoundView from "../views/errors/NotFoundView";
 import Layout from '../layout/Layout';
 
 export const router = createBrowserRouter([
@@ -8,8 +9,9 @@ export const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      ...shopRoutes
+      ...ShopRoutes
     ],
   },
-  ...authRoutes,
+  ...AuthRoutes,
+  { path: "*", element: <NotFoundView /> }, // 404 항상 맨 뒤에 있어야함
 ]);
