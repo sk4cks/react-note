@@ -2,8 +2,10 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { shoesList } from "../../temp_data/shoesData";
+import List from "../../components/shop/List";
 
 const ListView = () => {
+  
   const [list, setList] = useState(shoesList);
   const [pageNum, setPageNum] = useState(1);
 
@@ -40,24 +42,13 @@ const ListView = () => {
   }
 
   return (
-    <>
-      <div className="main-bg"></div>
-
-      <div className="container">
-        <div className="row">
-          {list.map((item, index) => (
-            <ProductList item={item} key={index} />
-          ))}
-        </div>
-
-        {pageNum === 3 ? (
-          <p>마지막 페이지입니다.</p>
-        ) : (
-          <button onClick={loadMore}>더보기</button>
-        )}
-      </div>
-    </>
-  );
+    <List
+      list={list}
+      pageNum={pageNum}
+      ProductList={ProductList}
+      loadMore={loadMore}
+    />
+  )
 };
 
 export default ListView;

@@ -4,6 +4,7 @@ import { useState } from "react";
 import NavigationBar from "../../components/nav/NavigationBar"
 
 const NavigationBarView = () => {
+  
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false); // 로그인 상태
 

@@ -1,6 +1,7 @@
 import { Button, Form, Container} from "react-bootstrap";
 
 const LoginForm = ({ userInfo, setUserInfo, handleLogin }) => {
+    
   return (
     <Container style={{ maxWidth: "400px", marginTop: "50px" }}>
         <h2>Login</h2>

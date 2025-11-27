@@ -1,6 +1,7 @@
 import { Container, Nav, Navbar, Button } from "react-bootstrap";
 
 const NavigationBar = ({navigate, handleAuth, isLoggedIn}) => {
+  
   return (
     <>
       <Navbar bg="light" variant="light">
