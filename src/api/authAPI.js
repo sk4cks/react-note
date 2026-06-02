@@ -1,10 +1,4 @@
-import axios from "axios";
-import { env } from "@/api/ApiEnv.js";
-import { makeQueryString } from "@/utils/Query.js";
-
-const config = {
-  authorizationUrl: `${env.BASE_API_URL + env.AUTHORIZATION_API_CONTEXT_PATH}`
-};
+import httpClient, { setAccessToken } from "@/api/httpClient.js";
 
 const authAPIDFN = {
   authAPI: (APIName, conditions, paths) => {
@@ -12,11 +6,31 @@ const authAPIDFN = {
   },
 };
 
-const authAPI = {
-  issueTempToken: (conditions, paths) => {
-    const uri = paths || "/auth/issueTempToken";
-    return axios.post(`${config.authorizationUrl}${uri}`, conditions)
+const saveTokenFromResponse = (response) => {
+  const accessToken = response.data?.access_token;
+  if (accessToken) {
+    setAccessToken(accessToken);
   }
+  return response;
+};
+
+const authAPI = {
+  /** 로컬 계정 — 프론트 → API → Auth Server /auth/login */
+  login: async (conditions, paths) => {
+    const uri = paths || "/api/auth/login";
+    const response = await httpClient.post(uri, conditions);
+    return saveTokenFromResponse(response);
+  },
+
+  /** SNS — authorization_code 콜백 후 토큰 교환 */
+  exchangeToken: async ({ code, codeVerifier, redirectUri }) => {
+    const response = await httpClient.post("/api/auth/token", {
+      code,
+      codeVerifier,
+      redirectUri,
+    });
+    return saveTokenFromResponse(response);
+  },
 };
 
 export { authAPIDFN, authAPI };

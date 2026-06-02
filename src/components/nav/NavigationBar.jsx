@@ -1,6 +1,6 @@
 import { Container, Nav, Navbar, Button } from "react-bootstrap";
 
-const NavigationBar = ({navigate, handleAuth, isLoggedIn}) => {
+const NavigationBar = ({ navigate, handleAuth, isLoggedIn, userId }) => {
   
   return (
     <>
@@ -13,7 +13,7 @@ const NavigationBar = ({navigate, handleAuth, isLoggedIn}) => {
           </Nav>
 
           <Button variant="outline-primary" onClick={handleAuth}>
-            {isLoggedIn ? "Logout" : "Login"}
+            {isLoggedIn ? `Logout${userId ? ` (${userId})` : ""}` : "Login"}
           </Button>
         </Container>
       </Navbar>
