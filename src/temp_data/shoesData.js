@@ -17,7 +17,7 @@ let shoesList = [
     id: 2,
     title: "Grey Yordan",
     content: "Born in the States",
-    price: 130000,
+    price: 1300000,
   },
 ];
 
