@@ -28,14 +28,17 @@ pipeline {
       steps {
         dir('gitops') {
           git url: "${GITOPS_REPO}", branch: 'main', credentialsId: 'github-gitops'
-          sh """
-            sed -i 's|image: ${ECR_URI}:.*|image: ${ECR_URI}:${BUILD_NUMBER}|' k8s/${GITOPS_MANIFEST}.yaml
-            git config user.email 'jenkins@local'
-            git config user.name 'jenkins'
-            git add k8s/${GITOPS_MANIFEST}.yaml
-            git diff --cached --quiet || git commit -m 'ci(react-note): image ${BUILD_NUMBER}'
-            git push origin main
-          """
+          withCredentials([usernamePassword(credentialsId: 'github-gitops', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+            sh """
+              sed -i 's|image: ${ECR_URI}:.*|image: ${ECR_URI}:${BUILD_NUMBER}|' k8s/${GITOPS_MANIFEST}.yaml
+              git config user.email 'jenkins@local'
+              git config user.name 'jenkins'
+              git add k8s/${GITOPS_MANIFEST}.yaml
+              git diff --cached --quiet || git commit -m 'ci(react-note): image ${BUILD_NUMBER}'
+              git remote set-url origin https://\${GH_USER}:\${GH_TOKEN}@github.com/sk4cks/react-note-deploy.git
+              git push origin main
+            """
+          }
         }
       }
     }
