@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API } from "@/api";
 import { consumePkceSession } from "@/oauth/pkce.js";
-import { oauthConfig } from "@/oauth/oauthConfig.js";
 
 const OAuthCallbackView = () => {
   const [searchParams] = useSearchParams();
@@ -34,7 +33,7 @@ const OAuthCallbackView = () => {
       .exchangeToken({
         code,
         codeVerifier,
-        redirectUri: oauthConfig.redirectUri,
+        redirectUri: import.meta.env.VITE_OAUTH_REDIRECT_URI,
       })
       .then(() => navigate("/"))
       .catch((err) => {

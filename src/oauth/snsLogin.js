@@ -4,13 +4,13 @@ import {
   generateState,
   storePkceSession,
 } from "@/oauth/pkce.js";
-import { oauthConfig } from "@/oauth/oauthConfig.js";
+import { env } from "@/api/ApiEnv.js";
 
 /**
- * SNS 로그인 — Auth Server oauth2Login + PKCE 브릿지.
+ * SNS 로그인 — 프론트 → API(BFF) → Auth Server oauth2Login + PKCE.
  * 1) PKCE를 sessionStorage에 저장
- * 2) /auth/social/prepare/{provider} 에 state·challenge 전달
- * 3) Google 인증 후 SPA /oauth/callback 으로 code → API token 교환
+ * 2) GET /api/auth/social/prepare/{provider} (BFF가 Auth로 redirect)
+ * 3) Google 인증 후 SPA /oauth/callback → POST /api/auth/token
  */
 export async function startSnsLogin(provider) {
   const codeVerifier = generateCodeVerifier();
@@ -21,10 +21,10 @@ export async function startSnsLogin(provider) {
   const params = new URLSearchParams({
     state,
     code_challenge: codeChallenge,
-    redirect_uri: oauthConfig.redirectUri,
+    redirect_uri: import.meta.env.VITE_OAUTH_REDIRECT_URI,
   });
 
   window.location.assign(
-    `${oauthConfig.authServerUrl}/auth/social/prepare/${provider}?${params.toString()}`
+    `${env.BASE_API_URL}/api/auth/social/prepare/${provider}?${params.toString()}`
   );
 }
