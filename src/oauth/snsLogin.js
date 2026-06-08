@@ -7,8 +7,10 @@ import {
 import { oauthConfig } from "@/oauth/oauthConfig.js";
 
 /**
- * SNS 로그인 — Auth Server에 oauth2Login 연동 후 사용.
- * 지금은 authorize + provider 경로만 준비 (서버 설정 필요).
+ * SNS 로그인 — Auth Server oauth2Login + PKCE 브릿지.
+ * 1) PKCE를 sessionStorage에 저장
+ * 2) /auth/social/prepare/{provider} 에 state·challenge 전달
+ * 3) Google 인증 후 SPA /oauth/callback 으로 code → API token 교환
  */
 export async function startSnsLogin(provider) {
   const codeVerifier = generateCodeVerifier();
@@ -17,16 +19,12 @@ export async function startSnsLogin(provider) {
   storePkceSession({ codeVerifier, state });
 
   const params = new URLSearchParams({
-    response_type: "code",
-    client_id: oauthConfig.clientId,
-    redirect_uri: oauthConfig.redirectUri,
-    scope: oauthConfig.scope,
     state,
     code_challenge: codeChallenge,
-    code_challenge_method: "S256",
+    redirect_uri: oauthConfig.redirectUri,
   });
 
   window.location.assign(
-    `${oauthConfig.authServerUrl}/oauth2/authorization/${provider}?${params.toString()}`
+    `${oauthConfig.authServerUrl}/auth/social/prepare/${provider}?${params.toString()}`
   );
 }

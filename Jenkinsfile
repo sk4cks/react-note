@@ -9,6 +9,8 @@ pipeline {
     GITOPS_REPO = 'https://github.com/sk4cks/react-note-deploy.git'
     GITOPS_MANIFEST = 'react-note'
     VITE_BASE_API_URL = 'https://api.13.239.220.205.nip.io'
+    VITE_AUTH_SERVER_URL = 'https://auth.13.239.220.205.nip.io/authorization-api'
+    VITE_OAUTH_REDIRECT_URI = 'https://app.13.239.220.205.nip.io/oauth/callback'
   }
   stages {
     stage('Checkout') {
@@ -21,6 +23,8 @@ pipeline {
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${ECR_URI%/*}
           docker build --platform linux/amd64 \
             --build-arg VITE_BASE_API_URL=$VITE_BASE_API_URL \
+            --build-arg VITE_AUTH_SERVER_URL=$VITE_AUTH_SERVER_URL \
+            --build-arg VITE_OAUTH_REDIRECT_URI=$VITE_OAUTH_REDIRECT_URI \
             -t $ECR_URI:${BUILD_NUMBER} -t $ECR_URI:latest .
           docker push $ECR_URI:${BUILD_NUMBER}
           docker push $ECR_URI:latest
