@@ -20,7 +20,9 @@ const NavigationBarView = () => {
     API.userAPI.getMe()
       .then((response) => {
         setIsLoggedIn(true);
-        setUserId(response.data.userId ?? "");
+        setUserId(
+          response.data.preferredUsername ?? response.data.userId ?? ""
+        );
       })
       .catch(() => {
         clearAuth();

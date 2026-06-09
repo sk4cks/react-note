@@ -2,8 +2,8 @@ import { Button, Form, Container } from "react-bootstrap";
 
 const SNS_PROVIDERS = [
   { id: "google", label: "Google로 로그인", enabled: true },
-  { id: "kakao", label: "Kakao로 로그인", enabled: false },
-  { id: "naver", label: "Naver로 로그인", enabled: false },
+  { id: "kakao", label: "Kakao로 로그인", enabled: true },
+  { id: "naver", label: "Naver로 로그인", enabled: true },
 ];
 
 const LoginForm = ({
