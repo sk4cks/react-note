@@ -1,4 +1,4 @@
-import httpClient, { setAccessToken } from "@/api/httpClient.js";
+import httpClient, { saveAccessToken } from "@/api/httpClient.js";
 
 const authAPIDFN = {
   authAPI: (APIName, conditions, paths) => {
@@ -7,10 +7,7 @@ const authAPIDFN = {
 };
 
 const saveTokenFromResponse = (response) => {
-  const accessToken = response.data?.access_token;
-  if (accessToken) {
-    setAccessToken(accessToken);
-  }
+  saveAccessToken(response.data ?? {});
   return response;
 };
 

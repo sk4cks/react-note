@@ -1,18 +1,20 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { API } from "@/api";
-import { clearAuth, getAccessToken } from "@/api/httpClient.js";
+import { clearAuth, getAccessToken, hasSessionHint } from "@/api/httpClient.js";
 import NavigationBar from "../../components/nav/NavigationBar"
 
 const NavigationBarView = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(!!getAccessToken());
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!getAccessToken() || hasSessionHint()
+  );
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
-    if (!getAccessToken()) {
+    if (!getAccessToken() && !hasSessionHint()) {
       setIsLoggedIn(false);
       setUserId("");
       return;
@@ -24,16 +26,16 @@ const NavigationBarView = () => {
           response.data.preferredUsername ?? response.data.userId ?? ""
         );
       })
-      .catch(() => {
-        clearAuth();
+      .catch(async () => {
+        await clearAuth();
         setIsLoggedIn(false);
         setUserId("");
       });
   }, [location]);
 
-  const handleAuth = () => {
+  const handleAuth = async () => {
     if (isLoggedIn) {
-      clearAuth();
+      await clearAuth();
       setIsLoggedIn(false);
       setUserId("");
     } else {
