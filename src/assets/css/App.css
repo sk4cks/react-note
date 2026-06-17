@@ -60,3 +60,38 @@
   opacity: 1;
   transition: opacity 0.5s;
 }
+
+.mail-container {
+  max-width: 100%;
+}
+
+.mail-list-item {
+  padding: 0.75rem 1rem;
+}
+
+.mail-unread {
+  background-color: #f0f7ff;
+  font-weight: 500;
+}
+
+.mail-from {
+  max-width: 60%;
+}
+
+.mail-subject {
+  margin-top: 0.15rem;
+}
+
+.mail-preview {
+  margin-top: 0.1rem;
+}
+
+.mail-body {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 1rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}

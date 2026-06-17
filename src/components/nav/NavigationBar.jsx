@@ -10,6 +10,9 @@ const NavigationBar = ({ navigate, handleAuth, isLoggedIn, userId }) => {
           <Nav className="me-auto">
             <Nav.Link onClick={() => navigate("/")}>Home</Nav.Link>
             <Nav.Link onClick={() => navigate("/cart")}>Cart</Nav.Link>
+            {isLoggedIn && (
+              <Nav.Link onClick={() => navigate("/mail")}>Mail</Nav.Link>
+            )}
           </Nav>
 
           <Button variant="outline-primary" onClick={handleAuth}>
