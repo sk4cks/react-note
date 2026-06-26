@@ -1,6 +1,6 @@
 import { Button, Card, Form } from "react-bootstrap";
 
-const MailCompose = ({ form, onChange, onSubmit, onCancel }) => {
+const MailCompose = ({ form, onChange, onSubmit, onCancel, sending = false }) => {
   return (
     <Card>
       <Card.Header>새 메일</Card.Header>
@@ -38,8 +38,8 @@ const MailCompose = ({ form, onChange, onSubmit, onCancel }) => {
             />
           </Form.Group>
           <div className="d-flex gap-2">
-            <Button type="submit" variant="primary">
-              보내기
+            <Button type="submit" variant="primary" disabled={sending}>
+              {sending ? "보내는 중..." : "보내기"}
             </Button>
             <Button type="button" variant="outline-secondary" onClick={onCancel}>
               취소

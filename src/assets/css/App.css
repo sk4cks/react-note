@@ -90,8 +90,16 @@
   white-space: pre-wrap;
   font-family: inherit;
   font-size: 1rem;
-  background: transparent;
-  border: none;
   padding: 0;
   margin: 0;
+}
+
+.mail-body-html {
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.mail-body-html img {
+  max-width: 100%;
+  height: auto;
 }

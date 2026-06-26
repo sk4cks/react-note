@@ -1,4 +1,5 @@
 import { Button, Card } from "react-bootstrap";
+import MailHtmlBody from "./MailHtmlBody";
 
 const MailDetail = ({ message, onBack, onReply }) => {
   return (
@@ -26,7 +27,11 @@ const MailDetail = ({ message, onBack, onReply }) => {
           </div>
         </div>
         <hr />
-        <pre className="mail-body">{message.body}</pre>
+        {message.bodyContentType === "text/html" ? (
+          <MailHtmlBody html={message.body} className="mail-body-html" />
+        ) : (
+          <div className="mail-body">{message.body}</div>
+        )}
       </Card.Body>
     </Card>
   );

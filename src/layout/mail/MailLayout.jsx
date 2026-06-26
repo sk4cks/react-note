@@ -36,9 +36,7 @@ const MailLayout = ({
               </ListGroup.Item>
             ))}
           </ListGroup>
-          <p className="text-muted small mt-3 mb-0">
-            목업 데이터 · Gmail API 연동 전
-          </p>
+          <p className="text-muted small mt-3 mb-0">Gmail API 연동</p>
         </Col>
         <Col md={9}>{children}</Col>
       </Row>
