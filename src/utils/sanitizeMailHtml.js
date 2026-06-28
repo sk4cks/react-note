@@ -18,6 +18,15 @@ export function sanitizeMailHtml(html) {
       "border",
       "cellpadding",
       "cellspacing",
+      "class",
+      "id",
+      "width",
+      "height",
+      "valign",
+      "colspan",
+      "rowspan",
+      "role",
+      "style",
     ],
   });
 }

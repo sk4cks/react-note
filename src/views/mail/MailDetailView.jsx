@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Alert, Spinner } from "react-bootstrap";
 import { API } from "@/api";
 import { startSnsLogin } from "@/oauth/snsLogin";
@@ -9,7 +9,9 @@ import NotFoundView from "../errors/NotFoundView";
 
 const MailDetailView = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
+  const folderFromList = location.state?.folder;
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,11 +49,13 @@ const MailDetailView = () => {
     };
   }, [id]);
 
+  const activeFolder = folderFromList ?? message?.folder ?? "inbox";
+
   if (loading) {
     return (
       <MailLayout
         navigate={navigate}
-        activeFolder="inbox"
+        activeFolder={folderFromList ?? "inbox"}
         onFolderChange={() => navigate("/mail")}
       >
         <div className="text-center py-5">
@@ -65,7 +69,7 @@ const MailDetailView = () => {
     return (
       <MailLayout
         navigate={navigate}
-        activeFolder="inbox"
+        activeFolder={folderFromList ?? "inbox"}
         onFolderChange={() => navigate("/mail")}
       >
         <Alert variant="warning">
@@ -88,7 +92,7 @@ const MailDetailView = () => {
     return error === "generic" ? (
       <MailLayout
         navigate={navigate}
-        activeFolder="inbox"
+        activeFolder={folderFromList ?? "inbox"}
         onFolderChange={() => navigate("/mail")}
       >
         <Alert variant="danger">메일을 불러오지 못했습니다.</Alert>
@@ -101,14 +105,14 @@ const MailDetailView = () => {
   return (
     <MailLayout
       navigate={navigate}
-      activeFolder={message.folder}
+      activeFolder={activeFolder}
       onFolderChange={(folderId) =>
         navigate("/mail", { state: { folder: folderId } })
       }
     >
       <MailDetail
         message={message}
-        onBack={() => navigate("/mail")}
+        onBack={() => navigate("/mail", { state: { folder: activeFolder } })}
         onReply={() =>
           navigate("/mail/compose", {
             state: {

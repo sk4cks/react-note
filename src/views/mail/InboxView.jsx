@@ -74,7 +74,7 @@ const InboxView = () => {
       {!loading && !error && (
         <MailInbox
           messages={messages}
-          onSelect={(id) => navigate(`/mail/${id}`)}
+          onSelect={(id) => navigate(`/mail/${id}`, { state: { folder } })}
         />
       )}
     </MailLayout>
