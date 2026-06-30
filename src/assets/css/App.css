@@ -67,11 +67,26 @@
 
 .mail-list-item {
   padding: 0.75rem 1rem;
+  border-left: none;
+  border-right: none;
 }
 
-.mail-unread {
-  background-color: #f0f7ff;
-  font-weight: 500;
+.mail-list-item.mail-unread {
+  background-color: #fff;
+}
+
+.mail-list-item.mail-read {
+  background-color: #f2f6fc;
+}
+
+.mail-list-item.mail-unread .mail-from,
+.mail-list-item.mail-unread .mail-subject {
+  font-weight: 700;
+}
+
+.mail-list-item.mail-read .mail-from,
+.mail-list-item.mail-read .mail-subject {
+  font-weight: 400;
 }
 
 .mail-from {

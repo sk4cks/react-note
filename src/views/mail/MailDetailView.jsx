@@ -112,7 +112,14 @@ const MailDetailView = () => {
     >
       <MailDetail
         message={message}
-        onBack={() => navigate("/mail", { state: { folder: activeFolder } })}
+        onBack={() =>
+          navigate("/mail", {
+            state: {
+              folder: activeFolder,
+              ...(message.unread ? {} : { readMessageId: id, refreshFolders: true }),
+            },
+          })
+        }
         onReply={() =>
           navigate("/mail/compose", {
             state: {

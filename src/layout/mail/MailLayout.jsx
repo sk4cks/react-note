@@ -36,7 +36,7 @@ const MailLayout = ({
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, activeFolder]);
+  }, [location.pathname, activeFolder, location.state?.readMessageId, location.key]);
 
   return (
     <div className="container mail-container text-start py-3">
@@ -52,6 +52,7 @@ const MailLayout = ({
           <ListGroup>
             {mailFolders.map((folder) => {
               const count = folderCounts[folder.id] ?? 0;
+              const showBadge = folder.id !== "sent" && count > 0;
 
               return (
                 <ListGroup.Item
@@ -62,7 +63,7 @@ const MailLayout = ({
                   className="d-flex justify-content-between align-items-center"
                 >
                   <span>{folder.label}</span>
-                  {count > 0 && (
+                  {showBadge && (
                     <span
                       className={`badge rounded-pill ${
                         activeFolder === folder.id

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Alert, Spinner } from "react-bootstrap";
 import { API } from "@/api";
@@ -9,39 +9,91 @@ import MailInbox from "../../components/mail/MailInbox";
 const InboxView = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const loadMoreRef = useRef(null);
+  const loadingMoreRef = useRef(false);
   const [folder, setFolder] = useState(location.state?.folder ?? "inbox");
   const [messages, setMessages] = useState([]);
+  const [nextPageToken, setNextPageToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    API.mailAPI
-      .listMessages(folder)
-      .then((response) => {
-        if (!cancelled) {
-          setMessages(response.data);
+  const loadMessages = useCallback(
+    async (pageToken = null, append = false) => {
+      if (append) {
+        if (loadingMoreRef.current) {
+          return;
         }
-      })
-      .catch((err) => {
-        if (!cancelled) {
+        loadingMoreRef.current = true;
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setError(null);
+      }
+
+      try {
+        const response = await API.mailAPI.listMessages(folder, pageToken);
+        const data = response.data;
+        const fetchedMessages = Array.isArray(data)
+          ? data
+          : (data.messages ?? []);
+        const token = Array.isArray(data) ? null : (data.nextPageToken ?? null);
+
+        setMessages((prev) =>
+          append ? [...prev, ...fetchedMessages] : fetchedMessages
+        );
+        setNextPageToken(token);
+      } catch (err) {
+        if (!append) {
           const code = err.response?.data?.code;
           setError(code === "MAIL_GOOGLE_NOT_LINKED" ? "google" : "generic");
         }
-      })
-      .finally(() => {
-        if (!cancelled) {
+      } finally {
+        if (append) {
+          loadingMoreRef.current = false;
+          setLoadingMore(false);
+        } else {
           setLoading(false);
         }
-      });
+      }
+    },
+    [folder]
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [folder]);
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  useEffect(() => {
+    const readMessageId = location.state?.readMessageId;
+    if (!readMessageId) {
+      return;
+    }
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === readMessageId ? { ...message, unread: false } : message
+      )
+    );
+  }, [location.state?.readMessageId]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !nextPageToken || loadingMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMessages(nextPageToken, true);
+        }
+      },
+      { rootMargin: "120px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [nextPageToken, loadingMore, loadMessages]);
 
   return (
     <MailLayout
@@ -75,6 +127,9 @@ const InboxView = () => {
         <MailInbox
           messages={messages}
           onSelect={(id) => navigate(`/mail/${id}`, { state: { folder } })}
+          loadMoreRef={loadMoreRef}
+          hasMore={Boolean(nextPageToken)}
+          loadingMore={loadingMore}
         />
       )}
     </MailLayout>
