@@ -1,28 +1,24 @@
 import { Button, Form, Container } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
-const SNS_PROVIDERS = [
-  { id: "google", label: "Google로 로그인", enabled: true },
-  { id: "kakao", label: "Kakao로 로그인", enabled: true },
-  { id: "naver", label: "Naver로 로그인", enabled: true },
-];
-
-const LoginForm = ({
+const RegisterForm = ({
   userInfo,
   setUserInfo,
-  handleLogin,
-  onSnsLogin,
+  handleRegister,
   isSubmitting,
 }) => {
   return (
     <Container style={{ maxWidth: "400px", marginTop: "50px" }}>
-      <h2>Login</h2>
+      <h2>회원가입</h2>
+      <p className="text-muted small">
+        가입 시 <code>아이디@도메인</code> 메일함이 함께 생성됩니다.
+      </p>
 
       <Form
         onSubmit={(e) => {
           e.preventDefault();
           if (!isSubmitting) {
-            handleLogin();
+            handleRegister();
           }
         }}
       >
@@ -37,7 +33,7 @@ const LoginForm = ({
               onChange={(e) =>
                 setUserInfo((prev) => ({ ...prev, userId: e.target.value }))
               }
-              placeholder="Enter username"
+              placeholder="영문, 숫자, 밑줄 (3자 이상)"
               autoComplete="username"
             />
           </div>
@@ -54,8 +50,28 @@ const LoginForm = ({
               onChange={(e) =>
                 setUserInfo((prev) => ({ ...prev, password: e.target.value }))
               }
-              placeholder="Enter password"
-              autoComplete="current-password"
+              placeholder="4자 이상"
+              autoComplete="new-password"
+            />
+          </div>
+        </Form.Group>
+
+        <Form.Group className="mb-3 row">
+          <Form.Label column sm={3}>
+            Confirm
+          </Form.Label>
+          <div className="col-sm-9">
+            <Form.Control
+              type="password"
+              value={userInfo.passwordConfirm}
+              onChange={(e) =>
+                setUserInfo((prev) => ({
+                  ...prev,
+                  passwordConfirm: e.target.value,
+                }))
+              }
+              placeholder="비밀번호 확인"
+              autoComplete="new-password"
             />
           </div>
         </Form.Group>
@@ -66,33 +82,15 @@ const LoginForm = ({
           className="w-100"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Signing in…" : "로그인"}
+          {isSubmitting ? "가입 중…" : "회원가입"}
         </Button>
       </Form>
 
       <p className="text-center mt-3 small">
-        계정이 없으신가요? <Link to="/register">회원가입</Link>
+        이미 계정이 있으신가요? <Link to="/login">로그인</Link>
       </p>
-
-      <hr className="my-4" />
-
-      <p className="text-muted small text-center mb-3">SNS 계정으로 로그인</p>
-      <div className="d-grid gap-2">
-        {SNS_PROVIDERS.map(({ id, label, enabled }) => (
-          <Button
-            key={id}
-            type="button"
-            variant="outline-secondary"
-            disabled={!enabled}
-            onClick={() => onSnsLogin(id)}
-          >
-            {label}
-            {!enabled && " (준비 중)"}
-          </Button>
-        ))}
-      </div>
     </Container>
   );
 };
 
-export default LoginForm;
+export default RegisterForm;

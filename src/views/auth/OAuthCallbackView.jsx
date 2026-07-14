@@ -35,7 +35,14 @@ const OAuthCallbackView = () => {
         codeVerifier,
         redirectUri: import.meta.env.VITE_OAUTH_REDIRECT_URI,
       })
-      .then(() => navigate("/"))
+      .then(async () => {
+        const statusRes = await API.authAPI.getOnboardingStatus();
+        if (statusRes.data?.needsUserId) {
+          navigate("/onboarding");
+        } else {
+          navigate("/");
+        }
+      })
       .catch((err) => {
         console.error(err);
         setError("Token exchange failed.");

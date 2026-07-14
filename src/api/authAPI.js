@@ -19,6 +19,22 @@ const authAPI = {
     return saveTokenFromResponse(response);
   },
 
+  /** 로컬 회원가입 — 프론트 → API → Auth Server /auth/register */
+  register: async ({ userId, password }) => {
+    return httpClient.post("/api/auth/register", { userId, password });
+  },
+
+  /** SNS 최초 로그인 — SYS_USER 등록 필요 여부 */
+  getOnboardingStatus: async () => {
+    return httpClient.get("/api/auth/onboarding-status");
+  },
+
+  /** SNS 최초 로그인 — userId 선택 후 토큰 재발급 */
+  completeSocialOnboarding: async ({ userId }) => {
+    const response = await httpClient.post("/api/auth/social/complete", { userId });
+    return saveTokenFromResponse(response);
+  },
+
   /** SNS — authorization_code 콜백 후 토큰 교환 */
   exchangeToken: async ({ code, codeVerifier, redirectUri }) => {
     const response = await httpClient.post("/api/auth/token", {
