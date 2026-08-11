@@ -1,11 +1,14 @@
-import { Button, Form, Container } from "react-bootstrap";
+import { Button, Form, Container, InputGroup } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 const RegisterForm = ({
   userInfo,
   setUserInfo,
   handleRegister,
+  handleCheckUserId,
   isSubmitting,
+  isChecking,
+  userIdCheckStatus,
 }) => {
   return (
     <Container style={{ maxWidth: "400px", marginTop: "50px" }}>
@@ -27,15 +30,31 @@ const RegisterForm = ({
             ID
           </Form.Label>
           <div className="col-sm-9">
-            <Form.Control
-              type="text"
-              value={userInfo.userId}
-              onChange={(e) =>
-                setUserInfo((prev) => ({ ...prev, userId: e.target.value }))
-              }
-              placeholder="영문, 숫자, 밑줄 (3자 이상)"
-              autoComplete="username"
-            />
+            <InputGroup>
+              <Form.Control
+                type="text"
+                value={userInfo.userId}
+                onChange={(e) =>
+                  setUserInfo((prev) => ({ ...prev, userId: e.target.value }))
+                }
+                placeholder="영문, 숫자, 밑줄 (3자 이상)"
+                autoComplete="username"
+              />
+              <Button
+                type="button"
+                variant="outline-secondary"
+                onClick={handleCheckUserId}
+                disabled={isChecking || isSubmitting}
+              >
+                {isChecking ? "확인 중…" : "중복확인"}
+              </Button>
+            </InputGroup>
+            {userIdCheckStatus === "available" && (
+              <Form.Text className="text-success">사용 가능한 아이디입니다.</Form.Text>
+            )}
+            {userIdCheckStatus === "taken" && (
+              <Form.Text className="text-danger">이미 사용 중인 아이디입니다.</Form.Text>
+            )}
           </div>
         </Form.Group>
 
@@ -80,7 +99,7 @@ const RegisterForm = ({
           type="submit"
           variant="primary"
           className="w-100"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isChecking}
         >
           {isSubmitting ? "가입 중…" : "회원가입"}
         </Button>

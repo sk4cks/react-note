@@ -38,9 +38,7 @@ const NavigationBarView = () => {
       await clearAuth();
       setIsLoggedIn(false);
       setUserId("");
-      if (location.pathname.startsWith("/mail")) {
-        navigate("/", { replace: true });
-      }
+      navigate("/", { replace: true });
     } else {
       navigate("/login");
     }

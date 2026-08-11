@@ -19,6 +19,11 @@ const authAPI = {
     return saveTokenFromResponse(response);
   },
 
+  /** 회원가입 전 아이디 중복 확인 — API → Auth Server /auth/check-userid */
+  checkUserId: async (userId) => {
+    return httpClient.get("/api/auth/check-userid", { params: { userId } });
+  },
+
   /** 로컬 회원가입 — 프론트 → API → Auth Server /auth/register */
   register: async ({ userId, password }) => {
     return httpClient.post("/api/auth/register", { userId, password });
