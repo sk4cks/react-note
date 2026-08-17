@@ -3,15 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Alert, Spinner } from "react-bootstrap";
 import { API } from "@/api";
 import { startSnsLogin } from "@/oauth/snsLogin";
-import MailLayout from "../../layout/mail/MailLayout";
 import MailInbox from "../../components/mail/MailInbox";
 
-const InboxView = () => {
+const MailInboxView = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const loadMoreRef = useRef(null);
   const loadingMoreRef = useRef(false);
-  const [folder, setFolder] = useState(location.state?.folder ?? "inbox");
+  const folder = location.state?.folder ?? "inbox";
   const [messages, setMessages] = useState([]);
   const [nextPageToken, setNextPageToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -96,11 +95,7 @@ const InboxView = () => {
   }, [nextPageToken, loadingMore, loadMessages]);
 
   return (
-    <MailLayout
-      navigate={navigate}
-      activeFolder={folder}
-      onFolderChange={setFolder}
-    >
+    <>
       {loading && (
         <div className="text-center py-5">
           <Spinner animation="border" size="sm" /> 메일 불러오는 중...
@@ -132,8 +127,8 @@ const InboxView = () => {
           loadingMore={loadingMore}
         />
       )}
-    </MailLayout>
+    </>
   );
 };
 
-export default InboxView;
+export default MailInboxView;

@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button, Col, ListGroup, Row } from "react-bootstrap";
 import { API } from "@/api";
 import { mailFolders } from "../../temp_data/mailData";
 
-const MailLayout = ({
-  navigate,
-  activeFolder,
-  onFolderChange,
-  children,
-}) => {
+const MailLayout = () => {
+  const navigate = useNavigate();
   const location = useLocation();
+  const activeFolder = location.state?.folder ?? "inbox";
   const [folderCounts, setFolderCounts] = useState({});
 
   useEffect(() => {
@@ -59,7 +56,9 @@ const MailLayout = ({
                   key={folder.id}
                   action
                   active={activeFolder === folder.id}
-                  onClick={() => onFolderChange(folder.id)}
+                  onClick={() =>
+                    navigate("/mail", { state: { folder: folder.id } })
+                  }
                   className="d-flex justify-content-between align-items-center"
                 >
                   <span>{folder.label}</span>
@@ -80,7 +79,9 @@ const MailLayout = ({
           </ListGroup>
           <p className="text-muted small mt-3 mb-0">Gmail API 연동</p>
         </Col>
-        <Col md={9}>{children}</Col>
+        <Col md={9}>
+          <Outlet />
+        </Col>
       </Row>
     </div>
   );

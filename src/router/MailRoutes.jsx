@@ -1,9 +1,15 @@
-import InboxView from "../views/mail/InboxView";
+import MailInboxView from "../views/mail/MailInboxView";
 import MailDetailView from "../views/mail/MailDetailView";
-import ComposeView from "../views/mail/ComposeView";
+import MailComposeView from "../views/mail/MailComposeView";
+import MailLayout from "../layout/mail/MailLayout";
 
 export const MailRoutes = [
-  { path: "mail", element: <InboxView /> },
-  { path: "mail/compose", element: <ComposeView /> },
-  { path: "mail/:id", element: <MailDetailView /> },
+  {
+    element: <MailLayout />,
+    children: [
+      { path: "mail", element: <MailInboxView /> },
+      { path: "mail/compose", element: <MailComposeView /> },
+      { path: "mail/:id", element: <MailDetailView /> },
+    ],
+  },
 ];

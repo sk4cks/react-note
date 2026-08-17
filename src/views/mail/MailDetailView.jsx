@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Alert, Spinner } from "react-bootstrap";
 import { API } from "@/api";
 import { startSnsLogin } from "@/oauth/snsLogin";
-import MailLayout from "../../layout/mail/MailLayout";
 import MailDetail from "../../components/mail/MailDetail";
 import NotFoundView from "../errors/NotFoundView";
 
@@ -53,85 +52,59 @@ const MailDetailView = () => {
 
   if (loading) {
     return (
-      <MailLayout
-        navigate={navigate}
-        activeFolder={folderFromList ?? "inbox"}
-        onFolderChange={() => navigate("/mail")}
-      >
-        <div className="text-center py-5">
-          <Spinner animation="border" size="sm" /> 메일 불러오는 중...
-        </div>
-      </MailLayout>
+      <div className="text-center py-5">
+        <Spinner animation="border" size="sm" /> 메일 불러오는 중...
+      </div>
     );
   }
 
   if (error === "google") {
     return (
-      <MailLayout
-        navigate={navigate}
-        activeFolder={folderFromList ?? "inbox"}
-        onFolderChange={() => navigate("/mail")}
-      >
-        <Alert variant="warning">
-          Gmail 연동이 필요합니다.
-          <div className="mt-2">
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              onClick={() => startSnsLogin("google")}
-            >
-              Google로 로그인
-            </button>
-          </div>
-        </Alert>
-      </MailLayout>
+      <Alert variant="warning">
+        Gmail 연동이 필요합니다.
+        <div className="mt-2">
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => startSnsLogin("google")}
+          >
+            Google로 로그인
+          </button>
+        </div>
+      </Alert>
     );
   }
 
-  if (error === "generic" || !message) {
-    return error === "generic" ? (
-      <MailLayout
-        navigate={navigate}
-        activeFolder={folderFromList ?? "inbox"}
-        onFolderChange={() => navigate("/mail")}
-      >
-        <Alert variant="danger">메일을 불러오지 못했습니다.</Alert>
-      </MailLayout>
-    ) : (
-      <NotFoundView />
-    );
+  if (error === "generic") {
+    return <Alert variant="danger">메일을 불러오지 못했습니다.</Alert>;
+  }
+
+  if (!message) {
+    return <NotFoundView />;
   }
 
   return (
-    <MailLayout
-      navigate={navigate}
-      activeFolder={activeFolder}
-      onFolderChange={(folderId) =>
-        navigate("/mail", { state: { folder: folderId } })
+    <MailDetail
+      message={message}
+      onBack={() =>
+        navigate("/mail", {
+          state: {
+            folder: activeFolder,
+            ...(message.unread ? {} : { readMessageId: id, refreshFolders: true }),
+          },
+        })
       }
-    >
-      <MailDetail
-        message={message}
-        onBack={() =>
-          navigate("/mail", {
-            state: {
-              folder: activeFolder,
-              ...(message.unread ? {} : { readMessageId: id, refreshFolders: true }),
-            },
-          })
-        }
-        onReply={() =>
-          navigate("/mail/compose", {
-            state: {
-              to: message.fromEmail,
-              subject: message.subject.startsWith("Re:")
-                ? message.subject
-                : `Re: ${message.subject}`,
-            },
-          })
-        }
-      />
-    </MailLayout>
+      onReply={() =>
+        navigate("/mail/compose", {
+          state: {
+            to: message.fromEmail,
+            subject: message.subject.startsWith("Re:")
+              ? message.subject
+              : `Re: ${message.subject}`,
+          },
+        })
+      }
+    />
   );
 };
 

@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Alert } from "react-bootstrap";
 import { API } from "@/api";
-import MailLayout from "../../layout/mail/MailLayout";
 import MailCompose from "../../components/mail/MailCompose";
 
-const ComposeView = () => {
+const MailComposeView = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const reply = location.state ?? {};
@@ -38,11 +37,7 @@ const ComposeView = () => {
   };
 
   return (
-    <MailLayout
-      navigate={navigate}
-      activeFolder="inbox"
-      onFolderChange={() => navigate("/mail")}
-    >
+    <>
       {error === "google" && (
         <Alert variant="warning" className="mb-3">
           Gmail 발송 권한이 없습니다. Google 계정으로 다시 로그인해 주세요.
@@ -60,8 +55,8 @@ const ComposeView = () => {
         onCancel={() => navigate("/mail")}
         sending={sending}
       />
-    </MailLayout>
+    </>
   );
 };
 
-export default ComposeView;
+export default MailComposeView;
