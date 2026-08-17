@@ -117,3 +117,68 @@
   max-width: 100%;
   height: auto;
 }
+
+.mail-compose-modes .btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+}
+
+/* Bootstrap의 textarea.form-control min-height를 이기려면 요소 선택자가 필요하다 */
+textarea.mail-compose-source {
+  min-height: 260px;
+}
+
+.mail-compose-source {
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.85rem;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.mail-compose-editor .ql-container {
+  min-height: 220px;
+  font-size: 1rem;
+}
+
+.mail-compose-editor .ql-editor {
+  min-height: 220px;
+}
+
+.mail-compose-editor .ql-editor img {
+  max-width: 100%;
+  height: auto;
+}
+
+.mail-compose-attachments {
+  text-align: left;
+}
+
+.mail-attachment-list {
+  list-style: none;
+  padding: 0;
+}
+
+.mail-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  background: #f8f9fa;
+  text-align: left;
+}
+
+.mail-attachment-item + .mail-attachment-item {
+  margin-top: 0.5rem;
+}
+
+.mail-attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

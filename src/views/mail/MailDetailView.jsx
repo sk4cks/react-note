@@ -10,7 +10,8 @@ const MailDetailView = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
-  const folderFromList = location.state?.folder;
+  /** IMAP UID는 폴더별로 달라 목록에서 넘어온 폴더로 조회해야 한다. */
+  const activeFolder = location.state?.folder ?? "inbox";
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,7 +22,7 @@ const MailDetailView = () => {
     setError(null);
 
     API.mailAPI
-      .getMessage(id)
+      .getMessage(id, activeFolder)
       .then((response) => {
         if (!cancelled) {
           setMessage(response.data);
@@ -46,9 +47,21 @@ const MailDetailView = () => {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, activeFolder]);
 
-  const activeFolder = folderFromList ?? message?.folder ?? "inbox";
+  const handleDownloadAttachment = async (attachment) => {
+    const response = await API.mailAPI.downloadAttachment(
+      id,
+      attachment.id,
+      activeFolder
+    );
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = attachment.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) {
     return (
@@ -86,6 +99,7 @@ const MailDetailView = () => {
   return (
     <MailDetail
       message={message}
+      onDownloadAttachment={handleDownloadAttachment}
       onBack={() =>
         navigate("/mail", {
           state: {

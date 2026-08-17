@@ -1,8 +1,11 @@
 import { Button, Card } from "react-bootstrap";
+import { formatBytes } from "@/utils/mailAttachment";
 import MailHtmlBody from "./MailHtmlBody";
 import MailPlainBody from "./MailPlainBody";
 
-const MailDetail = ({ message, onBack, onReply }) => {
+const MailDetail = ({ message, onBack, onReply, onDownloadAttachment }) => {
+  const attachments = message.attachments ?? [];
+
   return (
     <Card>
       <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -32,6 +35,37 @@ const MailDetail = ({ message, onBack, onReply }) => {
           <MailHtmlBody html={message.body} className="mail-body-html" />
         ) : (
           <MailPlainBody text={message.body} className="mail-body" />
+        )}
+        {attachments.length > 0 && (
+          <>
+            <hr />
+            <div className="mail-attachment-section">
+              <div className="fw-semibold small mb-2">
+                첨부파일 {attachments.length}개
+              </div>
+              <ul className="mail-attachment-list mb-0">
+                {attachments.map((attachment) => (
+                  <li key={attachment.id} className="mail-attachment-item">
+                    <span className="mail-attachment-name">
+                      {attachment.filename}
+                    </span>
+                    <span className="mail-attachment-size text-muted">
+                      {formatBytes(attachment.size)}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="p-0"
+                      onClick={() => onDownloadAttachment(attachment)}
+                    >
+                      다운로드
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
       </Card.Body>
     </Card>
