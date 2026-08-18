@@ -61,7 +61,7 @@ const MailComposeView = () => {
       const message = err.response?.data?.message;
       if (code === "MAIL_GOOGLE_NOT_LINKED") {
         setError("google");
-      } else if (code === "MAIL_INVALID_ATTACHMENT" && message) {
+      } else if (message) {
         setError(message);
       } else {
         setError("generic");
