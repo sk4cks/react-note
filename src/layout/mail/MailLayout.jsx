@@ -55,7 +55,9 @@ const MailLayout = () => {
                 <ListGroup.Item
                   key={folder.id}
                   action
-                  active={activeFolder === folder.id}
+                  active={
+                    location.pathname === "/mail" && activeFolder === folder.id
+                  }
                   onClick={() =>
                     navigate("/mail", { state: { folder: folder.id } })
                   }
@@ -76,6 +78,13 @@ const MailLayout = () => {
                 </ListGroup.Item>
               );
             })}
+            <ListGroup.Item
+              action
+              active={location.pathname === "/mail/contacts"}
+              onClick={() => navigate("/mail/contacts")}
+            >
+              주소록
+            </ListGroup.Item>
           </ListGroup>
           <p className="text-muted small mt-3 mb-0">Gmail API 연동</p>
         </Col>

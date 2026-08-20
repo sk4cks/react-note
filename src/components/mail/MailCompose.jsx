@@ -11,6 +11,7 @@ import {
   mailPayloadBytes,
   readFileAsDataUrl,
 } from "../../utils/mailAttachment";
+import MailRecipientField from "./MailRecipientField";
 
 const TOOLBAR_CONTAINER = [
   [{ header: [1, 2, false] }],
@@ -91,6 +92,8 @@ const MailCompose = ({
 
   const [sourceMode, setSourceMode] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState("");
+  const [showCc, setShowCc] = useState(() => (form.cc?.length ?? 0) > 0);
+  const [showBcc, setShowBcc] = useState(() => (form.bcc?.length ?? 0) > 0);
   const inlineImagesRef = useRef([]);
 
   const openSourceView = () => {
@@ -257,16 +260,56 @@ const MailCompose = ({
       <Card.Header>새 메일</Card.Header>
       <Card.Body>
         <Form onSubmit={onSubmit}>
-          <Form.Group className="mb-3" controlId="mailTo">
-            <Form.Label>받는 사람</Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="example@gmail.com"
-              value={form.to}
-              onChange={(e) => onChange("to", e.target.value)}
-              required
+          <MailRecipientField
+            id="mailTo"
+            label="받는 사람"
+            values={form.to}
+            onChange={(value) => onChange("to", value)}
+            placeholder="받는 사람"
+            required
+            trailing={
+              !showCc || !showBcc ? (
+                <>
+                  {!showCc && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => setShowCc(true)}
+                    >
+                      참조
+                    </Button>
+                  )}
+                  {!showBcc && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => setShowBcc(true)}
+                    >
+                      숨은참조
+                    </Button>
+                  )}
+                </>
+              ) : null
+            }
+          />
+          {showCc && (
+            <MailRecipientField
+              id="mailCc"
+              label="참조"
+              values={form.cc}
+              onChange={(value) => onChange("cc", value)}
+              placeholder="참조"
             />
-          </Form.Group>
+          )}
+          {showBcc && (
+            <MailRecipientField
+              id="mailBcc"
+              label="숨은참조"
+              values={form.bcc}
+              onChange={(value) => onChange("bcc", value)}
+              placeholder="숨은참조"
+            />
+          )}
           <Form.Group className="mb-3" controlId="mailSubject">
             <Form.Label>제목</Form.Label>
             <Form.Control

@@ -44,6 +44,14 @@ export function formatBytes(n) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** 쉼표·세미콜론으로 구분된 주소를 배열로 만든다. */
+export function parseMailAddresses(value) {
+  return (value ?? "")
+    .split(/[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 export function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

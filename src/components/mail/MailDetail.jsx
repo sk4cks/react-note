@@ -25,6 +25,16 @@ const MailDetail = ({ message, onBack, onReply, onDownloadAttachment }) => {
           <div>
             <strong>받는 사람:</strong> {message.to}
           </div>
+          {message.cc ? (
+            <div>
+              <strong>참조:</strong> {message.cc}
+            </div>
+          ) : null}
+          {message.folder === "sent" && message.bcc ? (
+            <div>
+              <strong>숨은 참조:</strong> {message.bcc}
+            </div>
+          ) : null}
           <div>
             <strong>날짜:</strong>{" "}
             {new Date(message.date).toLocaleString("ko-KR")}

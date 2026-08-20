@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Alert } from "react-bootstrap";
 import { API } from "@/api";
 import MailCompose from "../../components/mail/MailCompose";
+import { parseMailAddresses } from "../../utils/mailAttachment";
 import { sanitizeMailHtml } from "../../utils/sanitizeMailHtml";
 
 function isEmptyMailHtml(html) {
@@ -24,7 +25,9 @@ const MailComposeView = () => {
   const reply = location.state ?? {};
 
   const [form, setForm] = useState({
-    to: reply.to ?? "",
+    to: parseMailAddresses(reply.to ?? ""),
+    cc: [],
+    bcc: [],
     subject: reply.subject ?? "",
     body: "",
   });
@@ -38,6 +41,13 @@ const MailComposeView = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const to = form.to ?? [];
+    const cc = form.cc ?? [];
+    const bcc = form.bcc ?? [];
+    if (to.length === 0) {
+      alert("받는 사람을 입력해 주세요.");
+      return;
+    }
     if (isEmptyMailHtml(form.body) && attachments.length === 0) {
       alert("메일 내용이나 첨부파일을 넣어 주세요.");
       return;
@@ -46,7 +56,9 @@ const MailComposeView = () => {
     setError(null);
     try {
       await API.mailAPI.sendMail({
-        to: form.to,
+        to,
+        cc,
+        bcc,
         subject: form.subject,
         body: sanitizeMailHtml(form.body),
         attachments: attachments.map(({ filename, contentType, contentBase64 }) => ({

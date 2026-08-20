@@ -1,6 +1,7 @@
 import { authAPI } from "./authAPI";
 import { userAPI } from "./userAPI";
 import { mailAPI } from "./mailAPI";
+import { contactAPI } from "./contactAPI";
 
 const APIDFN = {
   APIDFN: (APIModule, APIName, conditions) => {
@@ -11,7 +12,7 @@ const APIDFN = {
 // eslint-disable-next-line
 const API = Object.assign(
   {},
-  { authAPI, userAPI, mailAPI }
+  { authAPI, userAPI, mailAPI, contactAPI }
 );
 
 export { API, APIDFN };
