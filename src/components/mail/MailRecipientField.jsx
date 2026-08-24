@@ -1,29 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { Form } from "react-bootstrap";
 import { API } from "@/api";
 import { parseMailAddresses } from "../../utils/mailAttachment";
-
-const AVATAR_COLORS = ["#c4783a", "#3d7a6a", "#5a6b8c", "#8b5a6b", "#6b7a3d", "#7a5a3d"];
-
-function avatarLabel(email) {
-  const local = (email.split("@")[0] || email).trim();
-  if (!local) {
-    return "?";
-  }
-  const first = [...local][0];
-
-  return /[a-z]/i.test(first) ? first.toUpperCase() : first;
-}
-
-function avatarColor(email) {
-  let hash = 0;
-  for (let i = 0; i < email.length; i += 1) {
-    hash = email.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import { avatarColor, avatarLabel, isImeComposing } from "../../utils/mailField";
 
 function suggestionLabel(item) {
   if (item.type === "group") {
@@ -36,9 +15,6 @@ function suggestionLabel(item) {
   return item.email;
 }
 
-/**
- * Gmail식 수신자 칩 입력 + 주소록/히스토리 자동완성.
- */
 const MailRecipientField = ({
   id,
   label,
@@ -55,6 +31,7 @@ const MailRecipientField = ({
   const inputRef = useRef(null);
   const blurTimer = useRef(null);
   const suggestTimer = useRef(null);
+  const suggestReq = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -70,13 +47,11 @@ const MailRecipientField = ({
         next.push(address);
       }
     }
-    flushSync(() => {
-      onChange(next);
-      setDraft("");
-      setSuggestions([]);
-      setOpen(false);
-      setActiveIndex(-1);
-    });
+    onChange(next);
+    setDraft("");
+    setSuggestions([]);
+    setOpen(false);
+    setActiveIndex(-1);
   };
 
   const commitDraft = (raw = draft) => {
@@ -101,11 +76,15 @@ const MailRecipientField = ({
     }
   };
 
-  const fetchSuggestions = (value) => {
+  const fetchSuggestions = (value, immediate = false) => {
     clearTimeout(suggestTimer.current);
-    suggestTimer.current = setTimeout(async () => {
+    const run = async () => {
+      const req = (suggestReq.current += 1);
       try {
         const response = await API.contactAPI.suggestRecipients(value);
+        if (req !== suggestReq.current) {
+          return;
+        }
         const items = (response.data ?? []).filter((item) => {
           if (item.type === "group") {
             return (item.emails ?? []).some((email) => !values.includes(email));
@@ -117,10 +96,18 @@ const MailRecipientField = ({
         setOpen(items.length > 0);
         setActiveIndex(items.length > 0 ? 0 : -1);
       } catch {
+        if (req !== suggestReq.current) {
+          return;
+        }
         setSuggestions([]);
         setOpen(false);
       }
-    }, 200);
+    };
+    if (immediate) {
+      run();
+      return;
+    }
+    suggestTimer.current = setTimeout(run, 200);
   };
 
   const removeAt = (index) => {
@@ -128,6 +115,9 @@ const MailRecipientField = ({
   };
 
   const handleKeyDown = (e) => {
+    if (isImeComposing(e)) {
+      return;
+    }
     if (open && suggestions.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -213,7 +203,10 @@ const MailRecipientField = ({
             onChange={(e) => {
               const value = e.target.value;
               setDraft(value);
-              fetchSuggestions(value);
+              fetchSuggestions(value, Boolean(e.nativeEvent.isComposing));
+            }}
+            onCompositionEnd={(e) => {
+              fetchSuggestions(e.currentTarget.value, true);
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => {

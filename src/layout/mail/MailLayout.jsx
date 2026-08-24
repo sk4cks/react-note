@@ -86,7 +86,6 @@ const MailLayout = () => {
               주소록
             </ListGroup.Item>
           </ListGroup>
-          <p className="text-muted small mt-3 mb-0">Gmail API 연동</p>
         </Col>
         <Col md={9}>
           <Outlet />
