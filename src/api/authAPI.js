@@ -1,11 +1,13 @@
 import httpClient, { saveAccessToken } from "@/api/httpClient.js";
 
+/** 예전 호출 방식 호환. API.authAPI.login 을 쓴다. */
 const authAPIDFN = {
   authAPI: (APIName, conditions, paths) => {
     return authAPI[APIName](conditions, paths);
   },
 };
 
+/** 응답 JSON의 access_token을 저장하고 그대로 돌려준다. */
 const saveTokenFromResponse = (response) => {
   saveAccessToken(response.data ?? {});
   return response;

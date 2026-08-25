@@ -1,3 +1,4 @@
+/** 상단 바(Note Mail, Mail, Login/Logout). 로그인 후 메일 화면에 항상 표시. */
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { API } from "@/api";
@@ -33,6 +34,7 @@ const NavigationBarView = () => {
       });
   }, [location]);
 
+  /** 로그인 화면으로 보내거나 로그아웃한다. */
   const handleAuth = async () => {
     if (isLoggedIn) {
       await clearAuth();

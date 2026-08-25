@@ -1,6 +1,6 @@
+/** 메일 상세. 메일 목록 > 메일 클릭. */
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Alert, Spinner } from "react-bootstrap";
 import { API } from "@/api";
 import { startSnsLogin } from "@/oauth/snsLogin";
 import MailDetail from "../../components/mail/MailDetail";
@@ -14,10 +14,10 @@ const MailDetailView = () => {
   const activeFolder = location.state?.folder ?? "inbox";
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); // google | generic | null
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false; // 메일을 바꾸면 이전 응답은 버린다.
     setLoading(true);
     setError(null);
 
@@ -34,6 +34,7 @@ const MailDetailView = () => {
             setMessage(null);
             return;
           }
+          // Gmail 미연동은 재로그인 안내, 그 외는 일반 오류.
           const code = err.response?.data?.code;
           setError(code === "MAIL_GOOGLE_NOT_LINKED" ? "google" : "generic");
         }
@@ -49,12 +50,14 @@ const MailDetailView = () => {
     };
   }, [id, activeFolder]);
 
+  /** 첨부 파일을 내려받는다. */
   const handleDownloadAttachment = async (attachment) => {
     const response = await API.mailAPI.downloadAttachment(
       id,
       attachment.id,
       activeFolder
     );
+
     const url = URL.createObjectURL(response.data);
     const link = document.createElement("a");
     link.href = url;
@@ -63,48 +66,22 @@ const MailDetailView = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <Spinner animation="border" size="sm" /> 메일 불러오는 중...
-      </div>
-    );
-  }
-
-  if (error === "google") {
-    return (
-      <Alert variant="warning">
-        Gmail 연동이 필요합니다.
-        <div className="mt-2">
-          <button
-            type="button"
-            className="btn btn-sm btn-primary"
-            onClick={() => startSnsLogin("google")}
-          >
-            Google로 로그인
-          </button>
-        </div>
-      </Alert>
-    );
-  }
-
-  if (error === "generic") {
-    return <Alert variant="danger">메일을 불러오지 못했습니다.</Alert>;
-  }
-
-  if (!message) {
+  if (!loading && !error && !message) {
     return <NotFoundView />;
   }
 
   return (
     <MailDetail
+      loading={loading}
+      error={error}
+      onGoogleLogin={() => startSnsLogin("google")}
       message={message}
       onDownloadAttachment={handleDownloadAttachment}
       onBack={() =>
         navigate("/mail", {
           state: {
             folder: activeFolder,
-            ...(message.unread ? {} : { readMessageId: id, refreshFolders: true }),
+            ...(message?.unread ? {} : { readMessageId: id, refreshFolders: true }),
           },
         })
       }

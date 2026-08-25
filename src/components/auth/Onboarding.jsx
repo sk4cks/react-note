@@ -1,5 +1,6 @@
 import { Button, Form, Container } from "react-bootstrap";
 
+/** SNS 첫 로그인 아이디 선택 폼. */
 const OnboardingForm = ({ userId, setUserId, handleSubmit, isSubmitting }) => {
   return (
     <Container style={{ maxWidth: "400px", marginTop: "50px" }}>

@@ -12,7 +12,7 @@ import { env } from "@/api/ApiEnv.js";
  * 2) GET /api/auth/social/prepare/{provider} (BFF가 Auth로 redirect)
  * 3) IdP 인증 후 SPA /oauth/callback → POST /api/auth/token
  */
-export async function startSnsLogin(provider) {
+export const startSnsLogin = async (provider) => {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = generateState();
@@ -27,4 +27,4 @@ export async function startSnsLogin(provider) {
   window.location.assign(
     `${env.BASE_API_URL}/api/auth/social/prepare/${provider}?${params.toString()}`
   );
-}
+};

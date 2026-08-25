@@ -1,9 +1,47 @@
-import { Button, Card } from "react-bootstrap";
+import { Alert, Button, Card, Spinner } from "react-bootstrap";
 import { formatBytes } from "@/utils/mailAttachment";
 import MailHtmlBody from "./MailHtmlBody";
 import MailPlainBody from "./MailPlainBody";
 
-const MailDetail = ({ message, onBack, onReply, onDownloadAttachment }) => {
+/** 메일 한 통(제목·본문·첨부). */
+const MailDetail = ({
+  loading,
+  error,
+  onGoogleLogin,
+  message,
+  onBack,
+  onReply,
+  onDownloadAttachment,
+}) => {
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <Spinner animation="border" size="sm" /> 메일 불러오는 중...
+      </div>
+    );
+  }
+
+  if (error === "google") {
+    return (
+      <Alert variant="warning">
+        Gmail 연동이 필요합니다.
+        <div className="mt-2">
+          <button type="button" className="btn btn-sm btn-primary" onClick={onGoogleLogin}>
+            Google로 로그인
+          </button>
+        </div>
+      </Alert>
+    );
+  }
+
+  if (error === "generic") {
+    return <Alert variant="danger">메일을 불러오지 못했습니다.</Alert>;
+  }
+
+  if (!message) {
+    return null;
+  }
+
   const attachments = message.attachments ?? [];
 
   return (

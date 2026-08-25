@@ -104,15 +104,18 @@ EC2 Stop/Start 후 k3s가 안 올라오던 이슈를 정리했습니다.
   },
 ];
 
-export function getMessagesByFolder(folderId) {
+/** 폴더별 임시 메일 목록. */
+export const getMessagesByFolder = (folderId) => {
   return mailMessages.filter((m) => m.folder === folderId);
-}
+};
 
-export function getMessageById(id) {
+/** id로 임시 메일 한 통. */
+export const getMessageById = (id) => {
   return mailMessages.find((m) => m.id === id);
-}
+};
 
-export function formatMailDate(isoString) {
+/** 목록에 쓸 짧은 날짜. */
+export const formatMailDate = (isoString) => {
   const date = new Date(isoString);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -120,4 +123,4 @@ export function formatMailDate(isoString) {
     return date.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
   }
   return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
-}
+};

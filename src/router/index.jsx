@@ -1,3 +1,4 @@
+/** `/` 홈 분기, `/mail/*` 로그인 필요, `/login` 등 인증 화면. */
 import { createBrowserRouter } from "react-router-dom";
 import { MailRoutes } from "./MailRoutes";
 import { AuthRoutes } from "./AuthRoutes";
@@ -13,7 +14,7 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <RequireAuth />,
-        children: MailRoutes,
+        children: [...MailRoutes],
       },
     ],
   },

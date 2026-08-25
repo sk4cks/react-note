@@ -1,3 +1,4 @@
+/** 로컬·SNS 로그인. 홈(비로그인) / 회원가입 > 로그인 / 상단 Login. */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API } from "@/api";
@@ -9,29 +10,36 @@ const LoginView = () => {
   const [userInfo, setUserInfo] = useState({ userId: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /** 아이디·비밀번호로 로그인한다. */
   const handleLogin = async () => {
     if (!userInfo.userId || !userInfo.password) {
       alert("아이디와 비밀번호를 입력해 주세요.");
       return;
     }
+
     setIsSubmitting(true);
+
     try {
       const response = await API.authAPI.login({ ...userInfo });
       if (!response.data?.access_token) {
         throw new Error("access_token missing");
       }
       navigate("/");
+
     } catch (error) {
       console.error(error);
       alert("로그인에 실패했습니다. 아이디와 비밀번호를 확인해 주세요.");
+
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /** Google/Kakao/Naver OAuth를 시작한다. */
   const handleSnsLogin = async (provider) => {
     try {
       await startSnsLogin(provider);
+
     } catch (error) {
       console.error(error);
       alert("SNS 로그인은 Auth Server 연동 후 사용할 수 있습니다.");

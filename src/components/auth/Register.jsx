@@ -1,6 +1,7 @@
 import { Button, Form, Container, InputGroup } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
+/** 로컬 회원가입 폼. */
 const RegisterForm = ({
   userInfo,
   setUserInfo,

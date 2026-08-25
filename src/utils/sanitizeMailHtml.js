@@ -7,7 +7,8 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 
-export function sanitizeMailHtml(html) {
+/** 메일 HTML에서 위험한 태그를 걷어낸다. */
+export const sanitizeMailHtml = (html) => {
   return DOMPurify.sanitize(html ?? "", {
     USE_PROFILES: { html: true },
     ADD_TAGS: ["style"],
@@ -31,4 +32,4 @@ export function sanitizeMailHtml(html) {
     ALLOWED_URI_REGEXP:
       /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   });
-}
+};

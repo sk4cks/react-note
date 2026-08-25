@@ -1,9 +1,10 @@
+/** 로컬 회원가입 (아이디 + 비밀번호). 로그인 > 회원가입. */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API } from "@/api";
 import Register from "../../components/auth/Register";
 
-const USER_ID_PATTERN = /^[a-zA-Z0-9_]+$/;
+const USER_ID_PATTERN = /^[a-zA-Z0-9_]+$/; // 영문·숫자·밑줄
 
 /**
  * 아이디 중복확인 결과.
@@ -21,10 +22,11 @@ const RegisterView = () => {
     passwordConfirm: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
+  const [isChecking, setIsChecking] = useState(false); // 아이디 중복확인 요청 중
   /** 위 status + 확인 당시 userId (폼 아이디와 다를 때는 결과를 무시) */
   const [userIdCheck, setUserIdCheck] = useState(IDLE_USER_ID_CHECK);
 
+  /** 아이디가 바뀌면 중복확인 결과를 버린다. */
   const updateUserInfo = (updater) => {
     setUserInfo((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
@@ -35,6 +37,7 @@ const RegisterView = () => {
     });
   };
 
+  /** 아이디 길이·문자 규칙을 검사한다. */
   const validateUserIdFormat = (userId) => {
     if (!userId) {
       alert("아이디를 입력해 주세요.");
@@ -51,13 +54,16 @@ const RegisterView = () => {
     return true;
   };
 
+  /** Auth에 아이디 사용 가능 여부를 묻는다. */
   const handleCheckUserId = async () => {
     const { userId } = userInfo;
+
     if (!validateUserIdFormat(userId)) {
       return;
     }
 
     setIsChecking(true);
+
     try {
       const response = await API.authAPI.checkUserId(userId);
       const available = response.data?.available === true;
@@ -70,18 +76,23 @@ const RegisterView = () => {
       } else {
         alert("이미 사용 중인 아이디입니다.");
       }
+
     } catch (error) {
       console.error(error);
       setUserIdCheck(IDLE_USER_ID_CHECK);
       const message = error.response?.data?.message;
       alert(message || "중복 확인에 실패했습니다.");
+
     } finally {
       setIsChecking(false);
     }
   };
 
+  /** 로컬 계정을 만들고 로그인 화면으로 보낸다. */
   const handleRegister = async () => {
     const { userId, password, passwordConfirm } = userInfo;
+
+    // 중복확인을 통과한 그 아이디로만 가입한다.
     if (!validateUserIdFormat(userId)) {
       return;
     }
@@ -103,6 +114,7 @@ const RegisterView = () => {
     }
 
     setIsSubmitting(true);
+
     try {
       const response = await API.authAPI.register({ userId, password });
       const mailAddress = response.data?.mailAddress;
@@ -112,11 +124,13 @@ const RegisterView = () => {
           : "가입이 완료되었습니다. 로그인해 주세요."
       );
       navigate("/login");
+
     } catch (error) {
       console.error(error);
       const status = error.response?.status;
       const message = error.response?.data?.message;
       if (status === 409) {
+        // 가입 사이에 아이디가 선점되면 중복확인을 다시 하게 한다.
         setUserIdCheck({ status: "taken", userId });
         alert("이미 사용 중인 아이디입니다.");
       } else if (message) {
@@ -124,13 +138,14 @@ const RegisterView = () => {
       } else {
         alert("회원가입에 실패했습니다.");
       }
+
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const userIdCheckStatus =
-    userIdCheck.userId === userInfo.userId ? userIdCheck.status : "idle";
+    userIdCheck.userId === userInfo.userId ? userIdCheck.status : "idle"; // 아이디를 고치면 미확인
 
   return (
     <Register

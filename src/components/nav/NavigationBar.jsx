@@ -1,5 +1,6 @@
 import { Container, Nav, Navbar, Button } from "react-bootstrap";
 
+/** 상단 Note Mail / Mail / Login·Logout. */
 const NavigationBar = ({ navigate, handleAuth, isLoggedIn, userId }) => {
   return (
     <>

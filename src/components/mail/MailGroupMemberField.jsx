@@ -3,20 +3,23 @@ import { parseMailAddresses } from "../../utils/mailAttachment";
 import { koreanMatches } from "../../utils/koreanMatch";
 import { avatarColor, avatarLabel, isImeComposing } from "../../utils/mailField";
 
-const SUGGEST_LIMIT = 8;
+const SUGGEST_LIMIT = 8; // 드롭다운에 보여줄 후보 수
 
-function contactKey(contact) {
+/** 칩 키. pending / 계정 / 개인 연락처를 구분한다. */
+const contactKey = (contact) => {
   if (contact.pending) {
     return `p:${(contact.email || "").toLowerCase()}`;
   }
   return contact.fromAccount ? `a:${contact.accountUserSeq}` : `c:${contact.id}`;
-}
+};
 
-function contactLabel(contact) {
+/** 칩에 보여줄 이름. 없으면 이메일. */
+const contactLabel = (contact) => {
   return contact.displayName || contact.email;
-}
+};
 
-function looksLikeEmail(value) {
+/** 입력이 새 이메일 한 개처럼 보이면 그 주소를 돌려준다. */
+const looksLikeEmail = (value) => {
   const emails = parseMailAddresses(value);
   if (emails.length !== 1) {
     return null;
@@ -27,9 +30,10 @@ function looksLikeEmail(value) {
   }
 
   return email;
-}
+};
 
-function findExact(candidates, raw, selectedKeys) {
+/** 이름 또는 이메일이 정확히 같은 후보. */
+const findExact = (candidates, raw, selectedKeys) => {
   const needle = raw.trim().toLowerCase();
   if (!needle) {
     return null;
@@ -46,7 +50,7 @@ function findExact(candidates, raw, selectedKeys) {
       );
     }) ?? null
   );
-}
+};
 
 /**
  * 그룹 멤버: 검색해 고르거나, 없는 이메일은 저장 전까지 임시로 넣는다.
@@ -57,15 +61,16 @@ const MailGroupMemberField = ({
   readOnly = false,
   onChange,
 }) => {
-  const [draft, setDraft] = useState("");
-  const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
+  const [draft, setDraft] = useState(""); // 아직 칩이 안 된 입력
+  const [open, setOpen] = useState(false); // 제안 목록
+  const [activeIndex, setActiveIndex] = useState(-1); // 키보드로 고른 제안
   const inputRef = useRef(null);
-  const blurTimer = useRef(null);
+  const blurTimer = useRef(null); // 포커스가 나가도 클릭할 틈을 줌
 
-  const selectedKeys = useMemo(() => new Set(members.map(contactKey)), [members]);
-  const membersRef = useRef(members);
+  const selectedKeys = useMemo(() => new Set(members.map(contactKey)), [members]); // 이미 넣은 칩
+  const membersRef = useRef(members); // 최신 멤버. 콜백에서 읽음
   membersRef.current = members;
+  /** 입력에 맞는, 아직 안 넣은 후보. */
   const suggestions = useMemo(() => {
     return candidates
       .filter(
@@ -75,6 +80,7 @@ const MailGroupMemberField = ({
       )
       .slice(0, SUGGEST_LIMIT);
   }, [candidates, draft, selectedKeys]);
+  /** 주소록에 없는 새 이메일이면 그 주소를 돌려준다. */
   const newEmail = useMemo(() => {
     const email = looksLikeEmail(draft);
     if (!email) {
@@ -90,6 +96,7 @@ const MailGroupMemberField = ({
 
     return email;
   }, [candidates, draft, members]);
+  /** 후보 + (있으면) 새 이메일 행. */
   const menuItems = useMemo(() => {
     const items = suggestions.map((contact) => ({ kind: "contact", contact }));
     if (newEmail) {
@@ -103,11 +110,13 @@ const MailGroupMemberField = ({
     return () => clearTimeout(blurTimer.current);
   }, []);
 
+  /** 이미 없는 멤버면 칩에 넣는다. */
   const addMember = (contact) => {
     const current = membersRef.current;
     if (!contact || current.some((member) => contactKey(member) === contactKey(contact))) {
       return;
     }
+
     const next = [...current, contact];
     membersRef.current = next;
     onChange(next);
@@ -117,12 +126,14 @@ const MailGroupMemberField = ({
     inputRef.current?.focus();
   };
 
+  /** 칩을 뺀다. */
   const removeAt = (index) => {
     const next = membersRef.current.filter((_, i) => i !== index);
     membersRef.current = next;
     onChange(next);
   };
 
+  /** 없는 이메일은 저장 전까지 pending 칩으로 넣는다. */
   const addNewEmail = (email) => {
     if (!email) {
       return;
@@ -130,12 +141,14 @@ const MailGroupMemberField = ({
     addMember({ email, displayName: "", fromAccount: false, pending: true });
   };
 
+  /** Enter/쉼표로 초안을 멤버로 확정한다. */
   const commitDraft = ({ preferHighlight = false } = {}) => {
     const exact = findExact(candidates, draft, selectedKeys);
     if (exact) {
       addMember(exact);
       return;
     }
+    // Enter로 고른 하이라이트가 있으면 그걸 넣는다.
     if (preferHighlight && activeIndex >= 0 && menuItems[activeIndex]) {
       const item = menuItems[activeIndex];
       if (item.kind === "new") {
@@ -149,15 +162,19 @@ const MailGroupMemberField = ({
       addNewEmail(newEmail);
       return;
     }
+    // 후보가 하나면 Enter만으로 넣는다.
     if (suggestions.length === 1) {
       addMember(suggestions[0]);
     }
   };
 
+  /** 화살표·Enter·Backspace. 한글 조합 중에는 무시. */
   const handleKeyDown = (e) => {
     if (isImeComposing(e)) {
       return;
     }
+
+    // 제안이 열려 있으면 화살표는 목록만 움직인다.
     if (open && menuItems.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -174,6 +191,8 @@ const MailGroupMemberField = ({
         return;
       }
     }
+
+    // 쉼표·Enter로 초안을 멤버로 확정한다. Enter는 하이라이트를 우선한다.
     if (e.key === "Enter" || e.key === "," || e.key === ";") {
       e.preventDefault();
       commitDraft({ preferHighlight: e.key === "Enter" && open && activeIndex >= 0 });

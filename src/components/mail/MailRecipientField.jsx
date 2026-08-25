@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Form } from "react-bootstrap";
-import { API } from "@/api";
 import { parseMailAddresses } from "../../utils/mailAttachment";
 import { avatarColor, avatarLabel, isImeComposing } from "../../utils/mailField";
 
-function suggestionLabel(item) {
+/** 자동완성 한 줄에 쓸 이름. */
+const suggestionLabel = (item) => {
   if (item.type === "group") {
     return item.displayName || "그룹";
   }
@@ -13,8 +13,9 @@ function suggestionLabel(item) {
   }
 
   return item.email;
-}
+};
 
+/** 받는/참조/숨은참조 칩 입력. 주소록 자동완성. */
 const MailRecipientField = ({
   id,
   label,
@@ -23,15 +24,16 @@ const MailRecipientField = ({
   placeholder = "이메일 주소",
   required = false,
   trailing = null,
+  onSuggest,
 }) => {
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(""); // 아직 칩이 안 된 입력
   const [suggestions, setSuggestions] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
+  const [open, setOpen] = useState(false); // 제안 목록
+  const [activeIndex, setActiveIndex] = useState(-1); // 키보드로 고른 제안
   const inputRef = useRef(null);
-  const blurTimer = useRef(null);
-  const suggestTimer = useRef(null);
-  const suggestReq = useRef(0);
+  const blurTimer = useRef(null); // 포커스가 나가도 클릭할 틈을 줌
+  const suggestTimer = useRef(null); // debounce
+  const suggestReq = useRef(0); // 늦게 온 응답 버리기
 
   useEffect(() => {
     return () => {
@@ -40,6 +42,7 @@ const MailRecipientField = ({
     };
   }, []);
 
+  /** 주소를 칩에 넣고 입력칸을 비운다. */
   const addEmails = (emails) => {
     const next = [...values];
     for (const address of emails) {
@@ -47,6 +50,7 @@ const MailRecipientField = ({
         next.push(address);
       }
     }
+
     onChange(next);
     setDraft("");
     setSuggestions([]);
@@ -54,6 +58,7 @@ const MailRecipientField = ({
     setActiveIndex(-1);
   };
 
+  /** 입력 중인 글을 주소로 파싱해 칩에 넣는다. */
   const commitDraft = (raw = draft) => {
     const parsed = parseMailAddresses(raw);
     if (parsed.length === 0) {
@@ -63,6 +68,7 @@ const MailRecipientField = ({
     addEmails(parsed);
   };
 
+  /** 제안(그룹/연락처)을 수신자에 넣는다. */
   const applySuggestion = (item) => {
     if (!item) {
       return;
@@ -76,16 +82,23 @@ const MailRecipientField = ({
     }
   };
 
+  /** 주소록·히스토리 제안을 가져온다. 한글 조합 중에는 바로 친다. */
   const fetchSuggestions = (value, immediate = false) => {
+    if (!onSuggest) {
+      return;
+    }
     clearTimeout(suggestTimer.current);
     const run = async () => {
       const req = (suggestReq.current += 1);
+
       try {
-        const response = await API.contactAPI.suggestRecipients(value);
+        const data = await onSuggest(value);
+        // 더 최근 입력이 있으면 이 응답은 버린다.
         if (req !== suggestReq.current) {
           return;
         }
-        const items = (response.data ?? []).filter((item) => {
+        // 이미 칩에 넣은 주소·그룹은 목록에서 뺀다.
+        const items = (data ?? []).filter((item) => {
           if (item.type === "group") {
             return (item.emails ?? []).some((email) => !values.includes(email));
           }
@@ -95,6 +108,7 @@ const MailRecipientField = ({
         setSuggestions(items);
         setOpen(items.length > 0);
         setActiveIndex(items.length > 0 ? 0 : -1);
+
       } catch {
         if (req !== suggestReq.current) {
           return;
@@ -103,6 +117,8 @@ const MailRecipientField = ({
         setOpen(false);
       }
     };
+
+    // 한글 조합 중에는 debounce 하면 ㄱ이 안 나간다.
     if (immediate) {
       run();
       return;
@@ -110,14 +126,18 @@ const MailRecipientField = ({
     suggestTimer.current = setTimeout(run, 200);
   };
 
+  /** 칩을 뺀다. */
   const removeAt = (index) => {
     onChange(values.filter((_, i) => i !== index));
   };
 
+  /** 화살표·Enter·Backspace. 한글 조합 중에는 무시. */
   const handleKeyDown = (e) => {
     if (isImeComposing(e)) {
       return;
     }
+
+    // 제안이 열려 있으면 화살표·Enter는 칩이 아니라 목록을 움직인다.
     if (open && suggestions.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -139,6 +159,8 @@ const MailRecipientField = ({
         return;
       }
     }
+
+    // 쉼표·Enter로 입력 중인 글을 칩으로 확정한다.
     if (e.key === "Enter" || e.key === "," || e.key === ";") {
       e.preventDefault();
       commitDraft();
@@ -150,6 +172,7 @@ const MailRecipientField = ({
     }
   };
 
+  /** 여러 주소가 붙은 붙여넣기는 바로 칩으로 나눈다. */
   const handlePaste = (e) => {
     const text = e.clipboardData?.getData("text");
     if (!text || !/[,;\s]/.test(text)) {

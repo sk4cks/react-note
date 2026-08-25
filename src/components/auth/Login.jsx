@@ -7,6 +7,7 @@ const SNS_PROVIDERS = [
   { id: "naver", label: "Naver로 로그인", enabled: true },
 ];
 
+/** 로컬·SNS 로그인 폼. */
 const LoginForm = ({
   userInfo,
   setUserInfo,

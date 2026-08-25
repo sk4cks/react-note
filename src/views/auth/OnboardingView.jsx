@@ -1,15 +1,17 @@
+/** SNS 첫 로그인 아이디 선택. 로그인 > SNS 로그인 > (아이디가 없을 때). */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API } from "@/api";
 import Onboarding from "../../components/auth/Onboarding";
 
-const USER_ID_PATTERN = /^[a-zA-Z0-9_]+$/;
+const USER_ID_PATTERN = /^[a-zA-Z0-9_]+$/; // 영문·숫자·밑줄
 
 const OnboardingView = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /** SNS 계정에 쓸 아이디를 등록하고 홈으로 간다. */
   const handleSubmit = async () => {
     if (!userId) {
       alert("아이디를 입력해 주세요.");
@@ -25,12 +27,14 @@ const OnboardingView = () => {
     }
 
     setIsSubmitting(true);
+
     try {
       const response = await API.authAPI.completeSocialOnboarding({ userId });
       if (!response.data?.access_token) {
         throw new Error("access_token missing");
       }
       navigate("/");
+
     } catch (error) {
       console.error(error);
       const status = error.response?.status;
@@ -42,6 +46,7 @@ const OnboardingView = () => {
       } else {
         alert("아이디 등록에 실패했습니다.");
       }
+
     } finally {
       setIsSubmitting(false);
     }

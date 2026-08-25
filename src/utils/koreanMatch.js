@@ -17,14 +17,16 @@ const COMPAT_CONSONANT = [
   "ㅁ", "ㅂ", "ㅃ", "ㅂㅅ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
 ];
 
-function normalize(value) {
+/** 비교용으로 공백을 빼고 소문자로 맞춘다. */
+const normalize = (value) => {
   if (!value) {
     return "";
   }
   return value.normalize("NFC").toLowerCase().replace(/\s+/g, "");
-}
+};
 
-function toJamo(cp) {
+/** 한글 음절·자모를 풀어 자모 문자열로 바꾼다. */
+const toJamo = (cp) => {
   if (cp >= 0xac00 && cp <= 0xd7a3) {
     const s = cp - 0xac00;
     const cho = Math.floor(s / 588);
@@ -32,6 +34,7 @@ function toJamo(cp) {
     const jong = s % 28;
     return CHO[cho] + JUNG_EXPAND[jung] + JONG_EXPAND[jong];
   }
+  // ㄱㄴㄷ / ㅏㅑ / 옛한글 자모는 음절이 아니라 따로 펼친다.
   if (cp >= 0x3131 && cp <= 0x314e) {
     return COMPAT_CONSONANT[cp - 0x3131];
   }
@@ -48,13 +51,15 @@ function toJamo(cp) {
     return JONG_EXPAND[cp - 0x11a8 + 1];
   }
   return String.fromCodePoint(cp);
-}
+};
 
-function jamoChars(text) {
+/** 글자마다 자모로 풀어 배열로 만든다. */
+const jamoChars = (text) => {
   return [...text].map((ch) => toJamo(ch.codePointAt(0)));
-}
+};
 
-function matchFrom(query, hay, start) {
+/** start부터 쿼리 자모가 접두로 이어지는지. */
+const matchFrom = (query, hay, start) => {
   let qi = 0;
   let hi = start;
   while (qi < query.length) {
@@ -65,12 +70,14 @@ function matchFrom(query, hay, start) {
     hi += 1;
   }
   return true;
-}
+};
 
-function contains(query, hay) {
+/** 부분 문자열 또는 자모 접두가 hay에 있는지. */
+const contains = (query, hay) => {
   if (hay.includes(query)) {
     return true;
   }
+  // ㄱ / 기처럼 음절이 덜 된 입력은 자모 접두로 본다.
   const hayJamo = jamoChars(hay);
   const queryJamo = jamoChars(query);
   for (let start = 0; start < hayJamo.length; start += 1) {
@@ -79,13 +86,13 @@ function contains(query, hay) {
     }
   }
   return false;
-}
+};
 
 /** 한글 부분 입력·초성 검색. ㄱ / 기 / 김 / ㄱㅊㅅ 모두 김철수를 찾는다. */
-export function koreanMatches(query, ...fields) {
+export const koreanMatches = (query, ...fields) => {
   const needle = normalize(query);
   if (!needle) {
     return true;
   }
   return fields.some((field) => field && contains(needle, normalize(field)));
-}
+};

@@ -1,11 +1,13 @@
 const URL_PATTERN =
   /(?:https?:\/\/|cursor:\/\/|mailto:)[^\s<>"')\]]+/g;
 
-function trimTrailingPunctuation(url) {
+/** 링크 끝에 붙은 ),. 등을 뺀다. */
+const trimTrailingPunctuation = (url) => {
   return url.replace(/[),.;!?]+$/, "");
-}
+};
 
-export function linkifyPlainText(text) {
+/** 본문 글에서 URL을 링크 조각으로 나눈다. */
+export const linkifyPlainText = (text) => {
   if (!text) {
     return [];
   }
@@ -35,4 +37,4 @@ export function linkifyPlainText(text) {
   }
 
   return parts;
-}
+};

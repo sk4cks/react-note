@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, ButtonGroup, Card, Form } from "react-bootstrap";
+import { Alert, Button, ButtonGroup, Card, Form } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import {
@@ -36,25 +36,31 @@ const iconProps = {
   focusable: false,
 };
 
-const RichTextIcon = () => (
-  <svg {...iconProps}>
-    <path d="M2.5 4h11M2.5 8h11M2.5 12h6" />
-  </svg>
-);
+/** 본문 편집 모드 아이콘. */
+const RichTextIcon = () => {
+  return (
+    <svg {...iconProps}>
+      <path d="M2.5 4h11M2.5 8h11M2.5 12h6" />
+    </svg>
+  );
+};
 
-const SourceIcon = () => (
-  <svg {...iconProps}>
-    <path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9.5 3l-3 10" />
-  </svg>
-);
+/** HTML 소스 편집 모드 아이콘. */
+const SourceIcon = () => {
+  return (
+    <svg {...iconProps}>
+      <path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9.5 3l-3 10" />
+    </svg>
+  );
+};
 
-const DATA_URL = /data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/g;
+const DATA_URL = /data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/g; // 본문 인라인 이미지
 
 /**
  * 본문 이미지의 data URL은 수십만 자라 그대로 두면 소스를 읽을 수 없다.
  * 짧은 자리표시자로 접고 원본은 따로 들고 있다가 되돌린다.
  */
-function collapseDataUrls(html) {
+const collapseDataUrls = (html) => {
   const images = [];
   const collapsed = html.replace(DATA_URL, (dataUrl, mimeType, base64) => {
     const size = formatBytes(estimateBase64Bytes(base64));
@@ -64,16 +70,17 @@ function collapseDataUrls(html) {
   });
 
   return { collapsed, images };
-}
+};
 
 /** 자리표시자를 원본 data URL로 되돌린다. 사용자가 고쳐 쓴 자리표시자는 복원되지 않는다. */
-function expandDataUrls(html, images) {
+const expandDataUrls = (html, images) => {
   return images.reduce(
     (acc, { placeholder, dataUrl }) => acc.split(placeholder).join(dataUrl),
     html
   );
-}
+};
 
+/** 메일 쓰기 폼(수신자·본문·첨부). */
 const MailCompose = ({
   form,
   attachments = [],
@@ -82,20 +89,23 @@ const MailCompose = ({
   onSubmit,
   onCancel,
   sending = false,
+  onSuggest,
+  error = null,
 }) => {
-  const quillRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const formRef = useRef(form);
-  const attachmentsRef = useRef(attachments);
+  const quillRef = useRef(null); // ReactQuill
+  const fileInputRef = useRef(null); // 숨긴 첨부 파일 input
+  const formRef = useRef(form); // 최신 form. 이미지 넣을 때 읽음
+  const attachmentsRef = useRef(attachments); // 최신 첨부. 콜백에서 읽음
   formRef.current = form;
   attachmentsRef.current = attachments;
 
-  const [sourceMode, setSourceMode] = useState(false);
-  const [htmlDraft, setHtmlDraft] = useState("");
+  const [sourceMode, setSourceMode] = useState(false); // true면 HTML 소스 편집
+  const [htmlDraft, setHtmlDraft] = useState(""); // 소스 창. data URL은 자리표시자
   const [showCc, setShowCc] = useState(() => (form.cc?.length ?? 0) > 0);
   const [showBcc, setShowBcc] = useState(() => (form.bcc?.length ?? 0) > 0);
-  const inlineImagesRef = useRef([]);
+  const inlineImagesRef = useRef([]); // 자리표시자 → 원본 data URL
 
+  /** 본문 data URL을 짧게 접고 소스 편집으로 바꾼다. */
   const openSourceView = () => {
     const { collapsed, images } = collapseDataUrls(form.body ?? "");
     inlineImagesRef.current = images;
@@ -103,11 +113,13 @@ const MailCompose = ({
     setSourceMode(true);
   };
 
+  /** 소스 편집 내용을 본문에 반영한다. 자리표시자는 원본 URL로 되돌린다. */
   const handleHtmlDraftChange = (value) => {
     setHtmlDraft(value);
     onChange("body", expandDataUrls(value, inlineImagesRef.current));
   };
 
+  /** 본문+첨부가 10MB를 넘으면 막는다. */
   const ensureWithinLimit = useCallback((nextHtml, nextAttachments) => {
     if (mailPayloadBytes(nextHtml, nextAttachments) > MAIL_MAX_BYTES) {
       alert("이미지와 첨부파일을 합쳐 10MB를 넘을 수 없습니다.");
@@ -116,20 +128,25 @@ const MailCompose = ({
     return true;
   }, []);
 
+  /** 이미지를 본문에 data URL로 넣는다. */
   const insertImageFile = useCallback(
     async (file) => {
       if (!file?.type?.startsWith("image/")) {
         return;
       }
+
       const dataUrl = await readFileAsDataUrl(file);
       const extraHtml = `<img src="${dataUrl}">`;
       if (!ensureWithinLimit(`${formRef.current.body || ""}${extraHtml}`, attachmentsRef.current)) {
         return;
       }
+
+      // 용량을 통과하면 커서 위치에 넣는다.
       const quill = quillRef.current?.getEditor?.();
       if (!quill) {
         return;
       }
+
       const range = quill.getSelection(true);
       const index = range ? range.index : quill.getLength();
       quill.insertEmbed(index, "image", dataUrl, "user");
@@ -138,6 +155,7 @@ const MailCompose = ({
     [ensureWithinLimit]
   );
 
+  /** 툴바 이미지 버튼 — 파일을 고르면 본문에 넣는다. */
   const imageHandler = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
@@ -167,14 +185,16 @@ const MailCompose = ({
 
   useEffect(() => {
     let cancelled = false;
-    let root;
+    let root; // quill.root. cleanup에서 리스너를 뗌
     let onPaste;
     let onDrop;
     let onDragOver;
-    let frames = 0;
+    let frames = 0; // 에디터 대기 프레임. 60이면 포기
+    /** Quill이 준비되면 붙여넣기·드롭으로 이미지를 넣는다. */
     const tryAttach = () => {
       const quill = quillRef.current?.getEditor?.();
       if (!quill) {
+        // 에디터가 아직 없으면 다음 프레임에 다시 본다.
         if (!cancelled && frames++ < 60) {
           requestAnimationFrame(tryAttach);
         }
@@ -222,6 +242,7 @@ const MailCompose = ({
     };
   }, [insertImageFile]);
 
+  /** 파일 선택창에서 고른 첨부를 넣는다. */
   const handleFilesSelected = async (event) => {
     const files = [...(event.target.files ?? [])];
     event.target.value = "";
@@ -232,6 +253,8 @@ const MailCompose = ({
       alert(`첨부파일은 최대 ${MAIL_MAX_ATTACHMENTS}개까지 가능합니다.`);
       return;
     }
+
+    // 파일마다 용량을 더해가며 붙인다. 넘치면 그 파일부터 버린다.
     const next = [...attachmentsRef.current];
     for (const file of files) {
       const dataUrl = await readFileAsDataUrl(file);
@@ -248,23 +271,37 @@ const MailCompose = ({
       }
       next.push(item);
     }
+
     onAttachmentsChange(next);
   };
 
+  /** 첨부 칩을 뺀다. */
   const removeAttachment = (id) => {
     onAttachmentsChange(attachments.filter((item) => item.id !== id));
   };
 
   return (
-    <Card>
-      <Card.Header>새 메일</Card.Header>
-      <Card.Body>
+    <>
+      {error === "google" && (
+        <Alert variant="warning" className="mb-3">
+          Gmail 발송 권한이 없습니다. Google 계정으로 다시 로그인해 주세요.
+        </Alert>
+      )}
+      {error && error !== "google" && (
+        <Alert variant="danger" className="mb-3">
+          {error === "generic" ? "메일을 보내지 못했습니다." : error}
+        </Alert>
+      )}
+      <Card>
+        <Card.Header>새 메일</Card.Header>
+        <Card.Body>
         <Form onSubmit={onSubmit}>
           <MailRecipientField
             id="mailTo"
             label="받는 사람"
             values={form.to}
             onChange={(value) => onChange("to", value)}
+            onSuggest={onSuggest}
             placeholder="받는 사람"
             required
             trailing={
@@ -298,6 +335,7 @@ const MailCompose = ({
               label="참조"
               values={form.cc}
               onChange={(value) => onChange("cc", value)}
+              onSuggest={onSuggest}
               placeholder="참조"
             />
           )}
@@ -307,6 +345,7 @@ const MailCompose = ({
               label="숨은참조"
               values={form.bcc}
               onChange={(value) => onChange("bcc", value)}
+              onSuggest={onSuggest}
               placeholder="숨은참조"
             />
           )}
@@ -430,8 +469,9 @@ const MailCompose = ({
             </Button>
           </div>
         </Form>
-      </Card.Body>
-    </Card>
+        </Card.Body>
+      </Card>
+    </>
   );
 };
 

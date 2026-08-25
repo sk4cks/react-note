@@ -1,3 +1,4 @@
+/** 객체를 `?key=value&` 쿼리 문자열로 만든다. */
 const makeQueryString = (jsonObject) => {
   let queryString = "?";
   let qryStr = "";

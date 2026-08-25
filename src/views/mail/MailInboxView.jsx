@@ -1,6 +1,6 @@
+/** 메일 목록(받은·보낸·임시보관함). 상단 Mail / 로그인 후 / 왼쪽 편지함. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Alert, Spinner } from "react-bootstrap";
 import { API } from "@/api";
 import { startSnsLogin } from "@/oauth/snsLogin";
 import MailInbox from "../../components/mail/MailInbox";
@@ -8,15 +8,16 @@ import MailInbox from "../../components/mail/MailInbox";
 const MailInboxView = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const loadMoreRef = useRef(null);
-  const loadingMoreRef = useRef(false);
+  const loadMoreRef = useRef(null); // 목록 맨 아래. 보이면 다음 페이지
+  const loadingMoreRef = useRef(false); // 스크롤 중복 요청 막기
   const folder = location.state?.folder ?? "inbox";
   const [messages, setMessages] = useState([]);
   const [nextPageToken, setNextPageToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); // google | generic | null
 
+  /** 폴더 메일을 불러온다. append면 다음 페이지. */
   const loadMessages = useCallback(
     async (pageToken = null, append = false) => {
       if (append) {
@@ -26,6 +27,7 @@ const MailInboxView = () => {
         loadingMoreRef.current = true;
         setLoadingMore(true);
       } else {
+        // 폴더를 바꾸면 목록을 처음부터 다시 읽는다.
         setLoading(true);
         setError(null);
       }
@@ -33,6 +35,7 @@ const MailInboxView = () => {
       try {
         const response = await API.mailAPI.listMessages(folder, pageToken);
         const data = response.data;
+        // 예전 API는 배열만, 지금은 { messages, nextPageToken }.
         const fetchedMessages = Array.isArray(data)
           ? data
           : (data.messages ?? []);
@@ -42,11 +45,13 @@ const MailInboxView = () => {
           append ? [...prev, ...fetchedMessages] : fetchedMessages
         );
         setNextPageToken(token);
+
       } catch (err) {
         if (!append) {
           const code = err.response?.data?.code;
           setError(code === "MAIL_GOOGLE_NOT_LINKED" ? "google" : "generic");
         }
+
       } finally {
         if (append) {
           loadingMoreRef.current = false;
@@ -95,39 +100,16 @@ const MailInboxView = () => {
   }, [nextPageToken, loadingMore, loadMessages]);
 
   return (
-    <>
-      {loading && (
-        <div className="text-center py-5">
-          <Spinner animation="border" size="sm" /> 메일 불러오는 중...
-        </div>
-      )}
-      {!loading && error === "google" && (
-        <Alert variant="warning">
-          Gmail 연동이 필요합니다. Google 계정으로 다시 로그인해 주세요.
-          <div className="mt-2">
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              onClick={() => startSnsLogin("google")}
-            >
-              Google로 로그인
-            </button>
-          </div>
-        </Alert>
-      )}
-      {!loading && error === "generic" && (
-        <Alert variant="danger">메일을 불러오지 못했습니다.</Alert>
-      )}
-      {!loading && !error && (
-        <MailInbox
-          messages={messages}
-          onSelect={(id) => navigate(`/mail/${id}`, { state: { folder } })}
-          loadMoreRef={loadMoreRef}
-          hasMore={Boolean(nextPageToken)}
-          loadingMore={loadingMore}
-        />
-      )}
-    </>
+    <MailInbox
+      loading={loading}
+      error={error}
+      onGoogleLogin={() => startSnsLogin("google")}
+      messages={messages}
+      onSelect={(id) => navigate(`/mail/${id}`, { state: { folder } })}
+      loadMoreRef={loadMoreRef}
+      hasMore={Boolean(nextPageToken)}
+      loadingMore={loadingMore}
+    />
   );
 };
 

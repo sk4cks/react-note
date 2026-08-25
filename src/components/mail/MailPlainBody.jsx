@@ -1,5 +1,6 @@
 import { linkifyPlainText } from "@/utils/linkifyPlainText";
 
+/** 텍스트 본문. URL은 링크로 바꾼다. */
 const MailPlainBody = ({ text, className }) => {
   const parts = linkifyPlainText(text);
 
