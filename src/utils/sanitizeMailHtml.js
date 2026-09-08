@@ -2,6 +2,7 @@ import DOMPurify from "dompurify";
 
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   if (node.tagName === "A") {
+    // 메일 본문 링크는 새 탭으로 연다.
     node.setAttribute("target", "_blank");
     node.setAttribute("rel", "noopener noreferrer");
   }

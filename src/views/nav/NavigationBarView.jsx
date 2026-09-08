@@ -20,6 +20,8 @@ const NavigationBarView = () => {
       setUserId("");
       return;
     }
+
+    // access token 또는 refresh cookie가 있으면 /api/me로 로그인 표시를 맞춘다.
     API.userAPI.getMe()
       .then((response) => {
         setIsLoggedIn(true);
@@ -41,9 +43,11 @@ const NavigationBarView = () => {
       setIsLoggedIn(false);
       setUserId("");
       navigate("/", { replace: true });
-    } else {
-      navigate("/login");
+
+      return;
     }
+
+    navigate("/login");
   };
 
   return (

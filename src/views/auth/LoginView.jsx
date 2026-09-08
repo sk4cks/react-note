@@ -21,9 +21,11 @@ const LoginView = () => {
 
     try {
       const response = await API.authAPI.login({ ...userInfo });
+
       if (!response.data?.access_token) {
         throw new Error("access_token missing");
       }
+
       navigate("/");
 
     } catch (error) {

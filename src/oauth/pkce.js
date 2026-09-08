@@ -42,7 +42,10 @@ export const storePkceSession = ({ codeVerifier, state }) => {
 export const consumePkceSession = () => {
   const codeVerifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
   const state = sessionStorage.getItem(PKCE_STATE_KEY);
+
+  // 한 번만 쓴다. 뒤로 가기로 콜백을 다시 타면 막힌다.
   sessionStorage.removeItem(PKCE_VERIFIER_KEY);
   sessionStorage.removeItem(PKCE_STATE_KEY);
+
   return { codeVerifier, state };
 };

@@ -77,9 +77,11 @@ export const refreshAccessTokenOnce = () => {
 /** 요청마다 Bearer access token을 붙인다. */
 httpClient.interceptors.request.use((config) => {
   const accessToken = getAccessToken();
+
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
+
   return config;
 });
 

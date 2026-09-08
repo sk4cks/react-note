@@ -20,9 +20,12 @@ const MailLayoutView = () => {
         if (cancelled) {
           return;
         }
+
+        // 폴더 id → 건수. 뱃지용.
         const counts = Object.fromEntries(
           response.data.map((folder) => [folder.id, folder.count])
         );
+
         setFolderCounts(counts);
       })
       .catch(() => {

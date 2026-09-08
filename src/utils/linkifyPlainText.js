@@ -25,6 +25,7 @@ export const linkifyPlainText = (text) => {
     }
 
     parts.push({ type: "link", value: url });
+
     if (trailing) {
       parts.push({ type: "text", value: trailing });
     }

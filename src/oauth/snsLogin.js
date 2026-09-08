@@ -16,6 +16,8 @@ export const startSnsLogin = async (provider) => {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = generateState();
+
+  // 콜백에서 verifier·state를 꺼내 /api/auth/token에 넣는다.
   storePkceSession({ codeVerifier, state });
 
   const params = new URLSearchParams({
@@ -24,6 +26,7 @@ export const startSnsLogin = async (provider) => {
     redirect_uri: import.meta.env.VITE_OAUTH_REDIRECT_URI,
   });
 
+  // BFF /api/auth/social/prepare 로 보낸다. BFF가 Auth prepare로 302 한다.
   window.location.assign(
     `${env.BASE_API_URL}/api/auth/social/prepare/${provider}?${params.toString()}`
   );

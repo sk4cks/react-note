@@ -70,9 +70,12 @@ const MailInboxView = () => {
 
   useEffect(() => {
     const readMessageId = location.state?.readMessageId;
+
     if (!readMessageId) {
       return;
     }
+
+    // 상세에서 읽음 처리된 메일을 목록에서도 바로 읽음으로 보여 준다.
     setMessages((prev) =>
       prev.map((message) =>
         message.id === readMessageId ? { ...message, unread: false } : message
@@ -96,6 +99,7 @@ const MailInboxView = () => {
     );
 
     observer.observe(target);
+
     return () => observer.disconnect();
   }, [nextPageToken, loadingMore, loadMessages]);
 

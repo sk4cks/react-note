@@ -28,10 +28,12 @@ const normalize = (value) => {
 /** 한글 음절·자모를 풀어 자모 문자열로 바꾼다. */
 const toJamo = (cp) => {
   if (cp >= 0xac00 && cp <= 0xd7a3) {
+    // 가~힣을 초성·중성·종성 자모로 푼다.
     const s = cp - 0xac00;
     const cho = Math.floor(s / 588);
     const jung = Math.floor((s % 588) / 28);
     const jong = s % 28;
+
     return CHO[cho] + JUNG_EXPAND[jung] + JONG_EXPAND[jong];
   }
   // ㄱㄴㄷ / ㅏㅑ / 옛한글 자모는 음절이 아니라 따로 펼친다.
@@ -91,8 +93,10 @@ const contains = (query, hay) => {
 /** 한글 부분 입력·초성 검색. ㄱ / 기 / 김 / ㄱㅊㅅ 모두 김철수를 찾는다. */
 export const koreanMatches = (query, ...fields) => {
   const needle = normalize(query);
+
   if (!needle) {
     return true;
   }
+
   return fields.some((field) => field && contains(needle, normalize(field)));
 };

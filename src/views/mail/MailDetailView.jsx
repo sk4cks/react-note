@@ -58,6 +58,7 @@ const MailDetailView = () => {
       activeFolder
     );
 
+    // blob URL을 만들어 <a download>로 저장한다.
     const url = URL.createObjectURL(response.data);
     const link = document.createElement("a");
     link.href = url;
@@ -81,6 +82,7 @@ const MailDetailView = () => {
         navigate("/mail", {
           state: {
             folder: activeFolder,
+            // 읽음 처리된 메일은 목록·뱃지도 바로 맞춘다.
             ...(message?.unread ? {} : { readMessageId: id, refreshFolders: true }),
           },
         })

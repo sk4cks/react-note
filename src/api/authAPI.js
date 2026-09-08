@@ -10,6 +10,7 @@ const authAPIDFN = {
 /** 응답 JSON의 access_token을 저장하고 그대로 돌려준다. */
 const saveTokenFromResponse = (response) => {
   saveAccessToken(response.data ?? {});
+
   return response;
 };
 
@@ -18,6 +19,7 @@ const authAPI = {
   login: async (conditions, paths) => {
     const uri = paths || "/api/auth/login";
     const response = await httpClient.post(uri, conditions);
+
     return saveTokenFromResponse(response);
   },
 
@@ -39,6 +41,7 @@ const authAPI = {
   /** SNS 최초 로그인 — userId 선택 후 토큰 재발급 */
   completeSocialOnboarding: async ({ userId }) => {
     const response = await httpClient.post("/api/auth/social/complete", { userId });
+
     return saveTokenFromResponse(response);
   },
 
@@ -49,6 +52,7 @@ const authAPI = {
       codeVerifier,
       redirectUri,
     });
+
     return saveTokenFromResponse(response);
   },
 };
