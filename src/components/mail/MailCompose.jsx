@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, ButtonGroup, Card, Form } from "react-bootstrap";
+import { Alert, Button, ButtonGroup, Card, Form, Spinner } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import {
@@ -91,6 +91,8 @@ const MailCompose = ({
   sending = false,
   onSuggest,
   error = null,
+  saveStatus = "idle",
+  loading = false,
 }) => {
   const quillRef = useRef(null); // ReactQuill
   const fileInputRef = useRef(null); // 숨긴 첨부 파일 input
@@ -104,6 +106,15 @@ const MailCompose = ({
   const [showCc, setShowCc] = useState(() => (form.cc?.length ?? 0) > 0);
   const [showBcc, setShowBcc] = useState(() => (form.bcc?.length ?? 0) > 0);
   const inlineImagesRef = useRef([]); // 자리표시자 → 원본 data URL
+
+  useEffect(() => {
+    if ((form.cc?.length ?? 0) > 0) {
+      setShowCc(true);
+    }
+    if ((form.bcc?.length ?? 0) > 0) {
+      setShowBcc(true);
+    }
+  }, [form.cc, form.bcc]);
 
   /** 본문 data URL을 짧게 접고 소스 편집으로 바꾼다. */
   const openSourceView = () => {
@@ -279,6 +290,14 @@ const MailCompose = ({
   const removeAttachment = (id) => {
     onAttachmentsChange(attachments.filter((item) => item.id !== id));
   };
+
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <Spinner animation="border" size="sm" /> 초안 불러오는 중...
+      </div>
+    );
+  }
 
   return (
     <>
@@ -460,13 +479,22 @@ const MailCompose = ({
               </ul>
             )}
           </div>
-          <div className="d-flex gap-2">
+          <div className="d-flex align-items-center gap-2">
             <Button type="submit" variant="primary" disabled={sending}>
               {sending ? "보내는 중..." : "보내기"}
             </Button>
             <Button type="button" variant="outline-secondary" onClick={onCancel}>
               취소
             </Button>
+            {saveStatus === "saving" && (
+              <span className="small text-muted">저장 중...</span>
+            )}
+            {saveStatus === "saved" && (
+              <span className="small text-muted">임시저장됨</span>
+            )}
+            {saveStatus === "error" && (
+              <span className="small text-danger">저장되지 않음</span>
+            )}
           </div>
         </Form>
         </Card.Body>

@@ -57,6 +57,34 @@ export const parseMailAddresses = (value) => {
     .filter(Boolean);
 };
 
+/** `이름 <email>` 형태에서 이메일만 꺼낸다. */
+export const parseMailAddressList = (value) => {
+  return parseMailAddresses(value).map((part) => {
+    const angled = part.match(/<([^>]+)>/);
+
+    return (angled ? angled[1] : part).trim();
+  }).filter(Boolean);
+};
+
+/** Blob을 첨부 payload(base64)로 읽는다. */
+export const readBlobAsAttachment = (blob, filename, contentType) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const contentBase64 = dataUrlToBase64(String(reader.result ?? ""));
+      resolve({
+        id: `${filename}-${blob.size}-${Date.now()}`,
+        filename,
+        contentType: contentType || blob.type || "application/octet-stream",
+        size: blob.size,
+        contentBase64,
+      });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+};
+
 /** 파일을 data URL로 읽는다. */
 export const readFileAsDataUrl = (file) => {
   return new Promise((resolve, reject) => {

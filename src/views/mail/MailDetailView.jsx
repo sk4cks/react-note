@@ -1,6 +1,6 @@
 /** 메일 상세. 메일 목록 > 메일 클릭. */
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { API } from "@/api";
 import { startSnsLogin } from "@/oauth/snsLogin";
 import MailDetail from "../../components/mail/MailDetail";
@@ -17,6 +17,9 @@ const MailDetailView = () => {
   const [error, setError] = useState(null); // google | generic | null
 
   useEffect(() => {
+    if (activeFolder === "draft") {
+      return;
+    }
     let cancelled = false; // 메일을 바꾸면 이전 응답은 버린다.
     setLoading(true);
     setError(null);
@@ -66,6 +69,10 @@ const MailDetailView = () => {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  if (activeFolder === "draft") {
+    return <Navigate to="/mail/compose" replace state={{ draftId: id }} />;
+  }
 
   if (!loading && !error && !message) {
     return <NotFoundView />;
