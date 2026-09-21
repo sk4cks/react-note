@@ -1,6 +1,6 @@
 /** 메일 쓰기. 왼쪽 메일 쓰기 / 메일 상세 > 답장 / 임시보관함 > 초안. */
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { API } from "@/api";
 import MailCompose from "../../components/mail/MailCompose";
 import {
@@ -11,6 +11,9 @@ import {
 import { sanitizeMailHtml } from "../../utils/sanitizeMailHtml";
 
 const AUTOSAVE_MS = 2000;
+const DRAFT_ID_SESSION_KEY = "mailComposeDraftId";
+const DRAFT_SNAPSHOT_KEY = "mailComposeSnapshot";
+const HIDE_SAVE_MS = 200;
 
 /** 보낼 본문이 비었는지. 이미지만 있으면 비어 있지 않다. */
 const isEmptyMailHtml = (html) => {
@@ -41,11 +44,44 @@ const isEmptyDraft = (form, attachments) => {
   );
 };
 
+/** 주소의 id가 저장 직후 바뀌었으면 세션에 남은 새 id로 다시 연다. */
+const fetchDraft = async (requestedId) => {
+  try {
+    const response = await API.mailAPI.getMessage(requestedId, "draft");
+
+    return response.data;
+
+  } catch (err) {
+    const fallbackId = sessionStorage.getItem(DRAFT_ID_SESSION_KEY);
+
+    if (err.response?.status === 404 && fallbackId && fallbackId !== requestedId) {
+      const response = await API.mailAPI.getMessage(fallbackId, "draft");
+
+      return response.data;
+    }
+
+    throw err;
+  }
+};
+
+/** 새로고침 직후 IMAP id가 바뀌었을 때 마지막 작성 내용을 되돌린다. */
+const readDraftSnapshot = () => {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_SNAPSHOT_KEY);
+
+    return raw ? JSON.parse(raw) : null;
+
+  } catch {
+    return null;
+  }
+};
+
 const MailComposeView = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const reply = location.state ?? {};
-  const draftIdFromRoute = reply.draftId ?? null;
+  const draftIdFromRoute = searchParams.get("draftId") || reply.draftId || null;
 
   const [form, setForm] = useState({
     to: parseMailAddresses(reply.to ?? ""),
@@ -69,7 +105,13 @@ const MailComposeView = () => {
   const skipSaveRef = useRef(false);
   const inFlightRef = useRef(false);
   const queuedRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const editGenRef = useRef(0);
+  // 초안 로드·Quill 첫 onChange는 수정으로 치지 않는다.
+  const ignoreChangesRef = useRef(Boolean(draftIdFromRoute));
+  const loadedIdRef = useRef(null);
   const saveDraftRef = useRef(async () => null);
+  const abortRef = useRef(null);
 
   formRef.current = form;
   attachmentsRef.current = attachments;
@@ -79,7 +121,28 @@ const MailComposeView = () => {
 
   /** 작성 폼 한 칸을 바꾼다. */
   const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      if (prev[field] === value) {
+        return prev;
+      }
+
+      if (!ignoreChangesRef.current) {
+        dirtyRef.current = true;
+        editGenRef.current += 1;
+      }
+
+      return { ...prev, [field]: value };
+    });
+  };
+
+  /** 첨부 목록을 바꾼다. */
+  const handleAttachmentsChange = (next) => {
+    if (!ignoreChangesRef.current) {
+      dirtyRef.current = true;
+      editGenRef.current += 1;
+    }
+
+    setAttachments(next);
   };
 
   /** 주소록·그룹·최근 수신자 제안. */
@@ -116,6 +179,10 @@ const MailComposeView = () => {
       return null;
     }
 
+    if (!dirtyRef.current) {
+      return null;
+    }
+
     if (isEmptyDraft(formRef.current, attachmentsRef.current)) {
       return null;
     }
@@ -128,24 +195,41 @@ const MailComposeView = () => {
 
     inFlightRef.current = true;
     setSaveStatus("saving");
+    const editGen = editGenRef.current;
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
 
     try {
       const payload = buildDraftPayload();
       const data = keepalive
         ? await API.mailAPI.saveDraftKeepalive(payload)
-        : (await API.mailAPI.saveDraft(payload)).data;
+        : (await API.mailAPI.saveDraft(payload, { signal: abortRef.current.signal })).data;
       const id = data?.id;
 
       if (id) {
         setDraftId(id);
         draftIdRef.current = id;
+        loadedIdRef.current = id;
+        sessionStorage.setItem(DRAFT_ID_SESSION_KEY, String(id));
+
+        if (searchParams.get("draftId") !== String(id)) {
+          setSearchParams({ draftId: String(id) }, { replace: true });
+        }
+      }
+
+      if (editGenRef.current === editGen) {
+        dirtyRef.current = false;
       }
 
       setSaveStatus("saved");
 
       return id;
 
-    } catch {
+    } catch (err) {
+      if (err.code === "ERR_CANCELED" || err.name === "CanceledError") {
+        return null;
+      }
+
       setSaveStatus("error");
 
       return null;
@@ -162,31 +246,49 @@ const MailComposeView = () => {
 
   useEffect(() => {
     if (!draftIdFromRoute) {
+      sessionStorage.removeItem(DRAFT_ID_SESSION_KEY);
+      sessionStorage.removeItem(DRAFT_SNAPSHOT_KEY);
+
+      return;
+    }
+
+    if (loadedIdRef.current === draftIdFromRoute) {
       return;
     }
 
     let cancelled = false;
     setLoadingDraft(true);
+    setError(null);
 
     const loadDraft = async () => {
       try {
-        const response = await API.mailAPI.getMessage(draftIdFromRoute, "draft");
-        const message = response.data;
-        const files = await Promise.all(
-          (message.attachments ?? []).map(async (attachment) => {
+        const message = await fetchDraft(draftIdFromRoute);
+
+        if (cancelled) {
+          return;
+        }
+
+        const files = [];
+
+        for (const attachment of message.attachments ?? []) {
+          try {
             const file = await API.mailAPI.downloadAttachment(
-              draftIdFromRoute,
+              message.id ?? draftIdFromRoute,
               attachment.id,
               "draft"
             );
-
-            return readBlobAsAttachment(
-              file.data,
-              attachment.filename,
-              attachment.contentType
+            files.push(
+              await readBlobAsAttachment(
+                file.data,
+                attachment.filename,
+                attachment.contentType
+              )
             );
-          })
-        );
+
+          } catch {
+            // 첨부만 실패해도 본문은 연다.
+          }
+        }
 
         if (cancelled) {
           return;
@@ -202,11 +304,37 @@ const MailComposeView = () => {
         });
         setAttachments(files);
         setDraftId(message.id ?? draftIdFromRoute);
+        loadedIdRef.current = message.id ?? draftIdFromRoute;
+
+        if (message.id && searchParams.get("draftId") !== String(message.id)) {
+          setSearchParams({ draftId: String(message.id) }, { replace: true });
+        }
 
       } catch {
-        if (!cancelled) {
-          setError("generic");
+        const snapshot = readDraftSnapshot();
+        const latestId = sessionStorage.getItem(DRAFT_ID_SESSION_KEY);
+        const canRestore =
+          snapshot?.form &&
+          (String(snapshot.id ?? "") === String(draftIdFromRoute) ||
+            (latestId && String(snapshot.id ?? "") === String(latestId)));
+
+        if (cancelled) {
+          return;
         }
+
+        if (canRestore) {
+          setForm(snapshot.form);
+          setDraftId(snapshot.id ?? draftIdFromRoute);
+          loadedIdRef.current = snapshot.id ?? draftIdFromRoute;
+
+          if (snapshot.id && searchParams.get("draftId") !== String(snapshot.id)) {
+            setSearchParams({ draftId: String(snapshot.id) }, { replace: true });
+          }
+
+          return;
+        }
+
+        setError("load");
 
       } finally {
         if (!cancelled) {
@@ -223,7 +351,21 @@ const MailComposeView = () => {
   }, [draftIdFromRoute]);
 
   useEffect(() => {
-    if (loadingDraft || sending) {
+    if (loadingDraft) {
+      ignoreChangesRef.current = true;
+
+      return;
+    }
+
+    const ready = window.setTimeout(() => {
+      ignoreChangesRef.current = false;
+    }, 100);
+
+    return () => window.clearTimeout(ready);
+  }, [loadingDraft]);
+
+  useEffect(() => {
+    if (loadingDraft || sending || !dirtyRef.current) {
       return;
     }
 
@@ -235,27 +377,66 @@ const MailComposeView = () => {
   }, [form, attachments, loadingDraft, sending]);
 
   useEffect(() => {
-    const flush = () => {
-      void saveDraftRef.current({ keepalive: true });
-    };
+    if (loadingDraft || error === "load") {
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(
+        DRAFT_SNAPSHOT_KEY,
+        JSON.stringify({ id: draftId, form })
+      );
+
+    } catch {
+      // 용량이 모자라면 서버 id만으로 연다.
+    }
+  }, [form, draftId, loadingDraft, error]);
+
+  /** 탭만 가리면 저장하고, 새로고침(pagehide)이면 저장을 취소한다. */
+  useEffect(() => {
+    let hideTimer = 0;
+
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
-        void saveDraftRef.current();
+        hideTimer = window.setTimeout(() => {
+          void saveDraftRef.current();
+        }, HIDE_SAVE_MS);
+
+        return;
       }
+
+      window.clearTimeout(hideTimer);
     };
 
-    window.addEventListener("pagehide", flush);
+    const onPageHide = () => {
+      window.clearTimeout(hideTimer);
+      queuedRef.current = false;
+      abortRef.current?.abort();
+    };
+
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
 
     return () => {
-      window.removeEventListener("pagehide", flush);
+      window.clearTimeout(hideTimer);
       document.removeEventListener("visibilitychange", onVisibility);
-
-      if (!skipSaveRef.current) {
-        void saveDraftRef.current({ keepalive: true });
-      }
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, []);
+
+  /** 목록으로 돌아간다. 수정분이 있으면 저장이 끝난 뒤 이동한다. */
+  const handleCancel = async () => {
+    while (inFlightRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    if (dirtyRef.current) {
+      await saveDraftRef.current();
+    }
+
+    skipSaveRef.current = true;
+    navigate("/mail", { state: { folder: draftIdFromRoute ? "draft" : "inbox" } });
+  };
 
   /** 메일을 보내고 보낸편지함으로 간다. */
   const handleSubmit = async (e) => {
@@ -270,8 +451,13 @@ const MailComposeView = () => {
       return;
     }
 
+    if (!(form.subject ?? "").trim()) {
+      alert("제목을 입력해 주세요.");
+      return;
+    }
+
     if (isEmptyMailHtml(form.body) && attachments.length === 0) {
-      alert("메일 내용이나 첨부파일을 넣어 주세요.");
+      alert("본문이나 첨부파일을 넣어 주세요.");
       return;
     }
 
@@ -284,12 +470,16 @@ const MailComposeView = () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
 
+      const body = isEmptyMailHtml(form.body)
+        ? "<p></p>"
+        : sanitizeMailHtml(form.body);
+
       await API.mailAPI.sendMail({
         to,
         cc,
         bcc,
         subject: form.subject,
-        body: sanitizeMailHtml(form.body),
+        body,
         attachments: attachments.map(({ filename, contentType, contentBase64 }) => ({
           filename,
           contentType,
@@ -301,8 +491,14 @@ const MailComposeView = () => {
 
     } catch (err) {
       skipSaveRef.current = false;
-      const code = err.response?.data?.code;
-      const message = err.response?.data?.message;
+      const data = err.response?.data;
+      const code = data?.code;
+      const fieldErrors = data?.errors;
+      const fieldMessage =
+        fieldErrors && typeof fieldErrors === "object"
+          ? Object.values(fieldErrors).filter(Boolean).join(" ")
+          : "";
+      const message = fieldMessage || data?.message;
 
       if (code === "MAIL_GOOGLE_NOT_LINKED") {
         setError("google");
@@ -322,9 +518,9 @@ const MailComposeView = () => {
       form={form}
       attachments={attachments}
       onChange={handleChange}
-      onAttachmentsChange={setAttachments}
+      onAttachmentsChange={handleAttachmentsChange}
       onSubmit={handleSubmit}
-      onCancel={() => navigate("/mail")}
+      onCancel={handleCancel}
       sending={sending}
       onSuggest={suggestRecipients}
       error={error}

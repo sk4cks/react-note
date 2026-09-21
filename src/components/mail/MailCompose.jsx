@@ -56,6 +56,10 @@ const SourceIcon = () => {
 
 const DATA_URL = /data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/g; // 본문 인라인 이미지
 
+/** OS에서 파일을 끌고 왔는지. */
+const hasDraggedFiles = (event) =>
+  [...(event.dataTransfer?.types ?? [])].includes("Files");
+
 /**
  * 본문 이미지의 data URL은 수십만 자라 그대로 두면 소스를 읽을 수 없다.
  * 짧은 자리표시자로 접고 원본은 따로 들고 있다가 되돌린다.
@@ -105,6 +109,8 @@ const MailCompose = ({
   const [htmlDraft, setHtmlDraft] = useState(""); // 소스 창. data URL은 자리표시자
   const [showCc, setShowCc] = useState(() => (form.cc?.length ?? 0) > 0);
   const [showBcc, setShowBcc] = useState(() => (form.bcc?.length ?? 0) > 0);
+  const [fileDrag, setFileDrag] = useState(false); // 파일을 카드 위에 끌고 있음
+  const dragDepthRef = useRef(0); // 자식 enter/leave가 겹쳐도 테두리를 유지
   const inlineImagesRef = useRef([]); // 자리표시자 → 원본 data URL
 
   useEffect(() => {
@@ -198,10 +204,8 @@ const MailCompose = ({
     let cancelled = false;
     let root; // quill.root. cleanup에서 리스너를 뗌
     let onPaste;
-    let onDrop;
-    let onDragOver;
     let frames = 0; // 에디터 대기 프레임. 60이면 포기
-    /** Quill이 준비되면 붙여넣기·드롭으로 이미지를 넣는다. */
+    /** Quill이 준비되면 붙여넣기 이미지를 넣는다. */
     const tryAttach = () => {
       const quill = quillRef.current?.getEditor?.();
       if (!quill) {
@@ -222,24 +226,7 @@ const MailCompose = ({
         event.preventDefault();
         insertImageFile(file);
       };
-      onDrop = (event) => {
-        const file = [...(event.dataTransfer?.files ?? [])].find((item) =>
-          item.type.startsWith("image/")
-        );
-        if (!file) {
-          return;
-        }
-        event.preventDefault();
-        insertImageFile(file);
-      };
-      onDragOver = (event) => {
-        if ([...(event.dataTransfer?.items ?? [])].some((item) => item.type.startsWith("image/"))) {
-          event.preventDefault();
-        }
-      };
       root.addEventListener("paste", onPaste);
-      root.addEventListener("drop", onDrop);
-      root.addEventListener("dragover", onDragOver);
     };
     tryAttach();
 
@@ -247,19 +234,16 @@ const MailCompose = ({
       cancelled = true;
       if (root && onPaste) {
         root.removeEventListener("paste", onPaste);
-        root.removeEventListener("drop", onDrop);
-        root.removeEventListener("dragover", onDragOver);
       }
     };
   }, [insertImageFile]);
 
-  /** 파일 선택창에서 고른 첨부를 넣는다. */
-  const handleFilesSelected = async (event) => {
-    const files = [...(event.target.files ?? [])];
-    event.target.value = "";
+  /** 고른 파일을 첨부 목록에 넣는다. */
+  const addAttachmentFiles = async (files) => {
     if (files.length === 0) {
       return;
     }
+
     if (attachmentsRef.current.length + files.length > MAIL_MAX_ATTACHMENTS) {
       alert(`첨부파일은 최대 ${MAIL_MAX_ATTACHMENTS}개까지 가능합니다.`);
       return;
@@ -267,6 +251,7 @@ const MailCompose = ({
 
     // 파일마다 용량을 더해가며 붙인다. 넘치면 그 파일부터 버린다.
     const next = [...attachmentsRef.current];
+
     for (const file of files) {
       const dataUrl = await readFileAsDataUrl(file);
       const item = {
@@ -277,13 +262,84 @@ const MailCompose = ({
         size: file.size,
       };
       const candidate = [...next, item];
+
       if (!ensureWithinLimit(formRef.current.body, candidate)) {
         return;
       }
+
       next.push(item);
     }
 
     onAttachmentsChange(next);
+  };
+
+  /** 파일 선택창에서 고른 첨부를 넣는다. */
+  const handleFilesSelected = async (event) => {
+    const files = [...(event.target.files ?? [])];
+    event.target.value = "";
+    await addAttachmentFiles(files);
+  };
+
+  /** 작성 카드 위로 파일을 끌면 첨부 가능하다고 표시한다. */
+  const handleFileDragEnter = (event) => {
+    if (!hasDraggedFiles(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    dragDepthRef.current += 1;
+    setFileDrag(true);
+  };
+
+  /** 작성 카드 안에서 드롭을 허용한다. */
+  const handleFileDragOver = (event) => {
+    if (!hasDraggedFiles(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  /** 자식 요소를 지나도 테두리가 깜빡이지 않게 깊이를 센다. */
+  const handleFileDragLeave = (event) => {
+    if (!hasDraggedFiles(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    dragDepthRef.current -= 1;
+
+    if (dragDepthRef.current <= 0) {
+      dragDepthRef.current = 0;
+      setFileDrag(false);
+    }
+  };
+
+  /** 본문 위 이미지는 삽입, 그 외 파일은 첨부한다. */
+  const handleFileDrop = async (event) => {
+    const files = [...(event.dataTransfer?.files ?? [])];
+
+    if (files.length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    dragDepthRef.current = 0;
+    setFileDrag(false);
+
+    const inEditor = Boolean(event.target.closest?.(".ql-editor"));
+    const imagesOnly = files.every((file) => file.type.startsWith("image/"));
+
+    if (inEditor && imagesOnly) {
+      for (const file of files) {
+        await insertImageFile(file);
+      }
+
+      return;
+    }
+
+    await addAttachmentFiles(files);
   };
 
   /** 첨부 칩을 뺀다. */
@@ -308,10 +364,20 @@ const MailCompose = ({
       )}
       {error && error !== "google" && (
         <Alert variant="danger" className="mb-3">
-          {error === "generic" ? "메일을 보내지 못했습니다." : error}
+          {error === "generic"
+            ? "메일을 보내지 못했습니다."
+            : error === "load"
+              ? "초안을 불러오지 못했습니다."
+              : error}
         </Alert>
       )}
-      <Card>
+      <Card
+        className={`mail-compose-card${fileDrag ? " mail-compose-drop-active" : ""}`}
+        onDragEnter={handleFileDragEnter}
+        onDragOver={handleFileDragOver}
+        onDragLeave={handleFileDragLeave}
+        onDrop={handleFileDrop}
+      >
         <Card.Header>새 메일</Card.Header>
         <Card.Body>
         <Form onSubmit={onSubmit}>
@@ -457,6 +523,9 @@ const MailCompose = ({
             >
               파일 첨부
             </Button>
+            <span className="small text-muted ms-2">
+              {fileDrag ? "여기에 놓으면 첨부됩니다" : "또는 이 창으로 끌어다 놓기"}
+            </span>
             {attachments.length > 0 && (
               <ul className="mail-attachment-list mt-2 mb-0">
                 {attachments.map((item) => (

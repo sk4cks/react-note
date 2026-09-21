@@ -71,7 +71,7 @@ const MailDetailView = () => {
   };
 
   if (activeFolder === "draft") {
-    return <Navigate to="/mail/compose" replace state={{ draftId: id }} />;
+    return <Navigate to={`/mail/compose?draftId=${encodeURIComponent(id)}`} replace />;
   }
 
   if (!loading && !error && !message) {

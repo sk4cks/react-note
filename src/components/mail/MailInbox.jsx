@@ -6,6 +6,7 @@ const MailInbox = ({
   loading,
   error,
   onGoogleLogin,
+  folder = "inbox",
   messages = [],
   onSelect,
   loadMoreRef,
@@ -51,7 +52,11 @@ const MailInbox = ({
           className={`mail-list-item ${msg.unread ? "mail-unread" : "mail-read"}`}
         >
           <div className="d-flex justify-content-between gap-2">
-            <span className="mail-from text-truncate">{msg.from}</span>
+            <span className="mail-from text-truncate">
+              {folder === "sent" || folder === "draft"
+                ? (msg.to?.trim() || "받는 사람 없음")
+                : msg.from}
+            </span>
             <small className="mail-date text-muted flex-shrink-0">
               {formatMailDate(msg.date)}
             </small>

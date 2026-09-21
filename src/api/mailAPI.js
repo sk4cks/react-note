@@ -21,7 +21,7 @@ const mailAPI = {
   /** 메일을 보낸다. */
   sendMail: (payload) => httpClient.post("/api/mail/send", payload),
   /** 임시저장. id가 있으면 그 초안을 교체한다. */
-  saveDraft: (payload) => httpClient.post("/api/mail/drafts", payload),
+  saveDraft: (payload, config) => httpClient.post("/api/mail/drafts", payload, config),
   /** 창을 닫을 때 쓰는 임시저장. 페이지가 내려가도 요청이 남는다. */
   saveDraftKeepalive: async (payload) => {
     const token = getAccessToken();

@@ -108,10 +108,11 @@ const MailInboxView = () => {
       loading={loading}
       error={error}
       onGoogleLogin={() => startSnsLogin("google")}
+      folder={folder}
       messages={messages}
       onSelect={(id) =>
         folder === "draft"
-          ? navigate("/mail/compose", { state: { draftId: id } })
+          ? navigate(`/mail/compose?draftId=${encodeURIComponent(id)}`)
           : navigate(`/mail/${id}`, { state: { folder } })
       }
       loadMoreRef={loadMoreRef}
