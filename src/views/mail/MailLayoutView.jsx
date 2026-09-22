@@ -37,7 +37,7 @@ const MailLayoutView = () => {
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, activeFolder, location.state?.readMessageId, location.key]);
+  }, [location.pathname, activeFolder, location.state?.readMessageId, location.state?.refreshFolders, location.key]);
 
   return (
     <MailLayout

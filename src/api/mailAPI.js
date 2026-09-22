@@ -20,6 +20,11 @@ const mailAPI = {
     ),
   /** 메일을 보낸다. */
   sendMail: (payload) => httpClient.post("/api/mail/send", payload),
+  /** 폴더 메일을 지운다. 휴지통이 아니면 휴지통으로 옮긴다. */
+  deleteMessages: (folder, ids) =>
+    httpClient.post("/api/mail/messages/delete", { folder, ids }),
+  /** 휴지통 메일을 원래 편지함으로 되돌린다. */
+  restoreMessages: (ids) => httpClient.post("/api/mail/messages/restore", { ids }),
   /** 임시저장. id가 있으면 그 초안을 교체한다. */
   saveDraft: (payload, config) => httpClient.post("/api/mail/drafts", payload, config),
   /** 창을 닫을 때 쓰는 임시저장. 페이지가 내려가도 요청이 남는다. */

@@ -11,6 +11,10 @@ const MailDetail = ({
   message,
   onBack,
   onReply,
+  onDelete,
+  onRestore,
+  deleting = false,
+  folder = "inbox",
   onDownloadAttachment,
 }) => {
   if (loading) {
@@ -45,14 +49,45 @@ const MailDetail = ({
   const attachments = message.attachments ?? [];
 
   return (
-    <Card>
+    <>
+      {error === "delete" && (
+        <Alert variant="danger" className="mb-2">
+          메일을 삭제하지 못했습니다.
+        </Alert>
+      )}
+      {error === "restore" && (
+        <Alert variant="danger" className="mb-2">
+          메일을 되돌리지 못했습니다.
+        </Alert>
+      )}
+      <Card>
       <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <Button variant="outline-secondary" size="sm" onClick={onBack}>
           ← 목록
         </Button>
-        <Button variant="outline-primary" size="sm" onClick={onReply}>
-          답장
-        </Button>
+        <div className="d-flex gap-2">
+          {folder === "trash" && (
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={deleting}
+              onClick={onRestore}
+            >
+              복원
+            </Button>
+          )}
+          <Button
+            variant="outline-danger"
+            size="sm"
+            disabled={deleting}
+            onClick={onDelete}
+          >
+            {folder === "trash" ? "완전히 삭제" : "삭제"}
+          </Button>
+          <Button variant="outline-primary" size="sm" onClick={onReply}>
+            답장
+          </Button>
+        </div>
       </Card.Header>
       <Card.Body>
         <h5 className="mb-3">{message.subject}</h5>
@@ -117,6 +152,7 @@ const MailDetail = ({
         )}
       </Card.Body>
     </Card>
+    </>
   );
 };
 

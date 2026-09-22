@@ -62,6 +62,85 @@
   padding: 0.75rem 1rem;
   border-left: none;
   border-right: none;
+  overflow: hidden;
+}
+
+.mail-list-main {
+  min-width: 0;
+}
+
+.mail-list-aside {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 40px;
+  height: 24px;
+}
+
+.mail-list-item:hover .mail-date,
+.mail-list-item:focus-within .mail-date {
+  visibility: hidden;
+}
+
+.mail-list-item .mail-from,
+.mail-list-item .mail-subject,
+.mail-list-item .mail-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-select-check,
+.mail-select-check .form-check-input,
+.mail-select-check .form-check-label {
+  cursor: pointer;
+}
+
+.mail-select-check:hover .form-check-input {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.mail-row-delete.btn,
+.mail-row-restore.btn {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #5f6368;
+  opacity: 0;
+  pointer-events: none;
+  text-decoration: none;
+  transform: translateY(-50%);
+}
+
+.mail-row-restore.btn {
+  right: 40px;
+}
+
+.mail-list-item:hover .mail-row-delete,
+.mail-list-item:focus-within .mail-row-delete,
+.mail-list-item:hover .mail-row-restore,
+.mail-list-item:focus-within .mail-row-restore {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mail-row-delete.btn:hover,
+.mail-row-delete.btn:focus-visible,
+.mail-row-restore.btn:hover,
+.mail-row-restore.btn:focus-visible {
+  color: #202124;
+  background-color: #e8eaed;
 }
 
 .mail-list-item.mail-unread {

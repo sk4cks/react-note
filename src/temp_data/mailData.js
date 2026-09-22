@@ -2,6 +2,7 @@ export const mailFolders = [
   { id: "inbox", label: "받은편지함" },
   { id: "sent", label: "보낸편지함" },
   { id: "draft", label: "임시보관함" },
+  { id: "trash", label: "휴지통" },
 ];
 
 export const mailMessages = [

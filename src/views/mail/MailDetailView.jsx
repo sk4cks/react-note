@@ -14,7 +14,8 @@ const MailDetailView = () => {
   const activeFolder = location.state?.folder ?? "inbox";
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // google | generic | null
+  const [error, setError] = useState(null); // google | generic | delete | null
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (activeFolder === "draft") {
@@ -70,6 +71,53 @@ const MailDetailView = () => {
     URL.revokeObjectURL(url);
   };
 
+  /** 휴지통이 아니면 휴지통으로, 휴지통이면 완전히 지운다. */
+  const handleDelete = async () => {
+    if (deleting) {
+      return;
+    }
+
+    if (
+      activeFolder === "trash" &&
+      !window.confirm("휴지통에서 완전히 삭제할까요? 되돌릴 수 없습니다.")
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      await API.mailAPI.deleteMessages(activeFolder, [id]);
+      navigate("/mail", {
+        state: { folder: activeFolder, refreshFolders: Date.now() },
+      });
+
+    } catch {
+      setError("delete");
+      setDeleting(false);
+    }
+  };
+
+  /** 휴지통 메일을 원래 편지함으로 되돌린다. */
+  const handleRestore = async () => {
+    if (deleting) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      await API.mailAPI.restoreMessages([id]);
+      navigate("/mail", {
+        state: { folder: "trash", refreshFolders: Date.now() },
+      });
+
+    } catch {
+      setError("restore");
+      setDeleting(false);
+    }
+  };
+
   if (activeFolder === "draft") {
     return <Navigate to={`/mail/compose?draftId=${encodeURIComponent(id)}`} replace />;
   }
@@ -104,6 +152,10 @@ const MailDetailView = () => {
           },
         })
       }
+      onDelete={handleDelete}
+      onRestore={handleRestore}
+      deleting={deleting}
+      folder={activeFolder}
     />
   );
 };

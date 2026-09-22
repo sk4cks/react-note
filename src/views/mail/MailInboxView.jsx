@@ -15,7 +15,9 @@ const MailInboxView = () => {
   const [nextPageToken, setNextPageToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null); // google | generic | null
+  const [error, setError] = useState(null); // google | generic | delete | null
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [deleting, setDeleting] = useState(false);
 
   /** 폴더 메일을 불러온다. append면 다음 페이지. */
   const loadMessages = useCallback(
@@ -69,6 +71,73 @@ const MailInboxView = () => {
   }, [loadMessages]);
 
   useEffect(() => {
+    setSelectedIds([]);
+  }, [folder]);
+
+  /** 휴지통이 아니면 휴지통으로, 휴지통이면 완전히 지운다. */
+  const deleteMessages = async (ids) => {
+    if (ids.length === 0 || deleting) {
+      return;
+    }
+
+    if (
+      folder === "trash" &&
+      !window.confirm(
+        ids.length === 1
+          ? "휴지통에서 완전히 삭제할까요? 되돌릴 수 없습니다."
+          : `선택한 ${ids.length}통을 휴지통에서 완전히 삭제할까요? 되돌릴 수 없습니다.`
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await API.mailAPI.deleteMessages(folder, ids);
+      setMessages((prev) => prev.filter((message) => !ids.includes(message.id)));
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      navigate("/mail", {
+        replace: true,
+        state: { folder, refreshFolders: Date.now() },
+      });
+
+    } catch {
+      setError("delete");
+
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /** 휴지통 메일을 원래 편지함으로 되돌린다. */
+  const restoreMessages = async (ids) => {
+    if (ids.length === 0 || deleting) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await API.mailAPI.restoreMessages(ids);
+      setMessages((prev) => prev.filter((message) => !ids.includes(message.id)));
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      navigate("/mail", {
+        replace: true,
+        state: { folder, refreshFolders: Date.now() },
+      });
+
+    } catch {
+      setError("restore");
+
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  useEffect(() => {
     const readMessageId = location.state?.readMessageId;
 
     if (!readMessageId) {
@@ -110,6 +179,22 @@ const MailInboxView = () => {
       onGoogleLogin={() => startSnsLogin("google")}
       folder={folder}
       messages={messages}
+      selectedIds={selectedIds}
+      onToggle={(id) =>
+        setSelectedIds((prev) =>
+          prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        )
+      }
+      onToggleAll={() =>
+        setSelectedIds((prev) =>
+          prev.length === messages.length ? [] : messages.map((message) => message.id)
+        )
+      }
+      onDeleteOne={(id) => deleteMessages([id])}
+      onDeleteSelected={() => deleteMessages(selectedIds)}
+      onRestoreOne={(id) => restoreMessages([id])}
+      onRestoreSelected={() => restoreMessages(selectedIds)}
+      deleting={deleting}
       onSelect={(id) =>
         folder === "draft"
           ? navigate(`/mail/compose?draftId=${encodeURIComponent(id)}`)
