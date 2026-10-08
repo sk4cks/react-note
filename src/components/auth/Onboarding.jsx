@@ -1,9 +1,16 @@
 import { Button, Form, Container } from "react-bootstrap";
 
 /** SNS 첫 로그인 아이디 선택 폼. */
-const OnboardingForm = ({ userId, setUserId, handleSubmit, isSubmitting }) => {
+const OnboardingForm = ({
+  userId, // 고른 아이디
+  setUserId, // 아이디 수정
+  handleSubmit, // 아이디 등록
+  isSubmitting, // 등록 요청 중
+}) => {
   return (
-    <Container style={{ maxWidth: "400px", marginTop: "50px" }}>
+    <Container style = {{ maxWidth: "400px", marginTop: "50px" }}>
+
+      {/* 안내 */}
       <h2>아이디 선택</h2>
       <p className="text-muted small">
         SNS 로그인이 처음입니다. 사용할 아이디를 정해 주세요.
@@ -11,13 +18,14 @@ const OnboardingForm = ({ userId, setUserId, handleSubmit, isSubmitting }) => {
         메일 주소는 <code>아이디@도메인</code> 형태로 부여됩니다.
       </p>
 
-      <Form onSubmit={(e) => e.preventDefault()}>
+      {/* 아이디와 시작 */}
+      <Form onSubmit = {(e) => e.preventDefault()}>
         <Form.Group className="mb-3">
           <Form.Label>User ID</Form.Label>
           <Form.Control
             type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
+            value = {userId}
+            onChange = {(e) => setUserId(e.target.value)}
             placeholder="영문, 숫자, 밑줄 (3자 이상)"
             autoComplete="username"
           />
@@ -25,10 +33,10 @@ const OnboardingForm = ({ userId, setUserId, handleSubmit, isSubmitting }) => {
 
         <Button
           type="button"
-          onClick={handleSubmit}
+          onClick = {handleSubmit}
           variant="primary"
           className="w-100"
-          disabled={isSubmitting}
+          disabled = {isSubmitting}
         >
           {isSubmitting ? "처리 중…" : "시작하기"}
         </Button>

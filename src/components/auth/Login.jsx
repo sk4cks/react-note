@@ -9,33 +9,38 @@ const SNS_PROVIDERS = [
 
 /** 로컬·SNS 로그인 폼. */
 const LoginForm = ({
-  userInfo,
-  setUserInfo,
-  handleLogin,
-  onSnsLogin,
-  isSubmitting,
+  userInfo, // 아이디·비밀번호
+  setUserInfo, // 입력 수정
+  handleLogin, // 로컬 로그인
+  onSnsLogin, // SNS 로그인 시작
+  isSubmitting, // 로그인 요청 중
 }) => {
   return (
-    <Container style={{ maxWidth: "400px", marginTop: "50px" }}>
+    <Container style = {{ maxWidth: "400px", marginTop: "50px" }}>
+
+      {/* 제목 */}
       <h2>Login</h2>
 
+      {/* 아이디·비밀번호 */}
       <Form
-        onSubmit={(e) => {
+        onSubmit = {(e) => {
           e.preventDefault();
           if (!isSubmitting) {
             handleLogin();
           }
         }}
       >
+
+        {/* 아이디 */}
         <Form.Group className="mb-3 row">
-          <Form.Label column sm={3}>
+          <Form.Label column sm = {3}>
             ID
           </Form.Label>
           <div className="col-sm-9">
             <Form.Control
               type="text"
-              value={userInfo.userId}
-              onChange={(e) =>
+              value = {userInfo.userId}
+              onChange = {(e) =>
                 setUserInfo((prev) => ({ ...prev, userId: e.target.value }))
               }
               placeholder="Enter username"
@@ -44,15 +49,16 @@ const LoginForm = ({
           </div>
         </Form.Group>
 
+        {/* 비밀번호 */}
         <Form.Group className="mb-3 row">
-          <Form.Label column sm={3}>
+          <Form.Label column sm = {3}>
             Password
           </Form.Label>
           <div className="col-sm-9">
             <Form.Control
               type="password"
-              value={userInfo.password}
-              onChange={(e) =>
+              value = {userInfo.password}
+              onChange = {(e) =>
                 setUserInfo((prev) => ({ ...prev, password: e.target.value }))
               }
               placeholder="Enter password"
@@ -61,31 +67,34 @@ const LoginForm = ({
           </div>
         </Form.Group>
 
+        {/* 로그인 */}
         <Button
           type="submit"
           variant="primary"
           className="w-100"
-          disabled={isSubmitting}
+          disabled = {isSubmitting}
         >
           {isSubmitting ? "Signing in…" : "로그인"}
         </Button>
       </Form>
 
+      {/* 회원가입 안내 */}
       <p className="text-center mt-3 small">
         계정이 없으신가요? <Link to="/register">회원가입</Link>
       </p>
 
+      {/* SNS 로그인 */}
       <hr className="my-4" />
 
       <p className="text-muted small text-center mb-3">SNS 계정으로 로그인</p>
       <div className="d-grid gap-2">
         {SNS_PROVIDERS.map(({ id, label, enabled }) => (
           <Button
-            key={id}
+            key = {id}
             type="button"
             variant="outline-secondary"
-            disabled={!enabled}
-            onClick={() => onSnsLogin(id)}
+            disabled = {!enabled}
+            onClick = {() => onSnsLogin(id)}
           >
             {label}
             {!enabled && " (준비 중)"}

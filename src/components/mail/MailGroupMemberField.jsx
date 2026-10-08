@@ -5,11 +5,12 @@ import { avatarColor, avatarLabel, isImeComposing } from "../../utils/mailField"
 
 const SUGGEST_LIMIT = 8; // 드롭다운에 보여줄 후보 수
 
-/** 칩 키. pending / 계정 / 개인 연락처를 구분한다. */
+/** pending, 계정, 개인 연락처를 가르는 칩 키. */
 const contactKey = (contact) => {
   if (contact.pending) {
     return `p:${(contact.email || "").toLowerCase()}`;
   }
+
   return contact.fromAccount ? `a:${contact.accountUserSeq}` : `c:${contact.id}`;
 };
 
@@ -18,12 +19,13 @@ const contactLabel = (contact) => {
   return contact.displayName || contact.email;
 };
 
-/** 입력이 새 이메일 한 개처럼 보이면 그 주소를 돌려준다. */
+/** 입력이 새 이메일 한 개처럼 보일 때 돌려주는 주소. */
 const looksLikeEmail = (value) => {
   const emails = parseMailAddresses(value);
   if (emails.length !== 1) {
     return null;
   }
+
   const email = emails[0];
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return null;
@@ -44,6 +46,7 @@ const findExact = (candidates, raw, selectedKeys) => {
       if (selectedKeys.has(contactKey(contact))) {
         return false;
       }
+
       return (
         contact.email.toLowerCase() === needle ||
         (contact.displayName || "").toLowerCase() === needle
@@ -53,13 +56,13 @@ const findExact = (candidates, raw, selectedKeys) => {
 };
 
 /**
- * 그룹 멤버: 검색해 고르거나, 없는 이메일은 저장 전까지 임시로 넣는다.
+ * 검색으로 고르거나, 없는 이메일은 저장 전까지 임시로 두는 그룹 멤버.
  */
 const MailGroupMemberField = ({
-  members = [],
-  candidates = [],
-  readOnly = false,
-  onChange,
+  members = [], // 칩으로 올라간 멤버
+  candidates = [], // 고를 수 있는 연락처
+  readOnly = false, // 공유받은 읽기 전용
+  onChange, // 멤버 칩 수정
 }) => {
   const [draft, setDraft] = useState(""); // 아직 칩이 안 된 입력
   const [open, setOpen] = useState(false); // 제안 목록
@@ -80,16 +83,18 @@ const MailGroupMemberField = ({
       )
       .slice(0, SUGGEST_LIMIT);
   }, [candidates, draft, selectedKeys]);
-  /** 주소록에 없는 새 이메일이면 그 주소를 돌려준다. */
+  /** 주소록에 없는 새 이메일이면 돌려주는 주소. */
   const newEmail = useMemo(() => {
     const email = looksLikeEmail(draft);
     if (!email) {
       return null;
     }
+
     const lower = email.toLowerCase();
     if (members.some((member) => member.email.toLowerCase() === lower)) {
       return null;
     }
+
     if (candidates.some((contact) => contact.email.toLowerCase() === lower)) {
       return null;
     }
@@ -110,7 +115,7 @@ const MailGroupMemberField = ({
     return () => clearTimeout(blurTimer.current);
   }, []);
 
-  /** 이미 없는 멤버면 칩에 넣는다. */
+  /** 아직 없는 멤버를 칩에 넣는 추가. */
   const addMember = (contact) => {
     const current = membersRef.current;
     if (!contact || current.some((member) => contactKey(member) === contactKey(contact))) {
@@ -126,29 +131,31 @@ const MailGroupMemberField = ({
     inputRef.current?.focus();
   };
 
-  /** 칩을 뺀다. */
+  /** 칩 삭제. */
   const removeAt = (index) => {
     const next = membersRef.current.filter((_, i) => i !== index);
     membersRef.current = next;
     onChange(next);
   };
 
-  /** 없는 이메일은 저장 전까지 pending 칩으로 넣는다. */
+  /** 없는 이메일을 저장 전까지 두는 pending 칩 추가. */
   const addNewEmail = (email) => {
     if (!email) {
       return;
     }
+
     addMember({ email, displayName: "", fromAccount: false, pending: true });
   };
 
-  /** Enter/쉼표로 초안을 멤버로 확정한다. */
+  /** Enter·쉼표로 초안을 멤버로 확정. */
   const commitDraft = ({ preferHighlight = false } = {}) => {
     const exact = findExact(candidates, draft, selectedKeys);
     if (exact) {
       addMember(exact);
       return;
     }
-    // Enter로 고른 하이라이트가 있으면 그걸 넣는다.
+
+    // Enter로 고른 하이라이트가 있으면 그 멤버 추가.
     if (preferHighlight && activeIndex >= 0 && menuItems[activeIndex]) {
       const item = menuItems[activeIndex];
       if (item.kind === "new") {
@@ -156,13 +163,16 @@ const MailGroupMemberField = ({
       } else {
         addMember(item.contact);
       }
+
       return;
     }
+
     if (newEmail) {
       addNewEmail(newEmail);
       return;
     }
-    // 후보가 하나면 Enter만으로 넣는다.
+
+    // 후보가 하나면 Enter만으로 하는 추가.
     if (suggestions.length === 1) {
       addMember(suggestions[0]);
     }
@@ -174,30 +184,33 @@ const MailGroupMemberField = ({
       return;
     }
 
-    // 제안이 열려 있으면 화살표는 목록만 움직인다.
+    // 제안이 열려 있으면 목록만 움직이는 화살표.
     if (open && menuItems.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setActiveIndex((prev) => (prev + 1) % menuItems.length);
         return;
       }
+
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setActiveIndex((prev) => (prev <= 0 ? menuItems.length - 1 : prev - 1));
         return;
       }
+
       if (e.key === "Escape") {
         setOpen(false);
         return;
       }
     }
 
-    // 쉼표·Enter로 초안을 멤버로 확정한다. Enter는 하이라이트를 우선한다.
+    // 쉼표·Enter로 초안을 멤버로 확정. Enter는 하이라이트 우선.
     if (e.key === "Enter" || e.key === "," || e.key === ";") {
       e.preventDefault();
       commitDraft({ preferHighlight: e.key === "Enter" && open && activeIndex >= 0 });
       return;
     }
+
     if (e.key === "Backspace" && !draft && members.length > 0 && !readOnly) {
       e.preventDefault();
       removeAt(members.length - 1);
@@ -206,14 +219,18 @@ const MailGroupMemberField = ({
 
   return (
     <div className="mb-3">
+
+      {/* 멤버 수 */}
       <div className="d-flex justify-content-between align-items-center mb-1">
         <div className="fw-semibold small mb-0">멤버</div>
         <div className="small text-muted">{members.length}명</div>
       </div>
+
+      {/* 칩과 입력 */}
       <div className="mail-recipient-wrap">
         <div
           className="mail-recipient-field"
-          onClick={() => {
+          onClick = {() => {
             if (!readOnly) {
               inputRef.current?.focus();
             }
@@ -221,13 +238,13 @@ const MailGroupMemberField = ({
         >
           {members.map((contact, index) => (
             <span
-              key={contactKey(contact)}
+              key = {contactKey(contact)}
               className="mail-recipient-chip"
-              title={contact.email}
+              title = {contact.email}
             >
               <span
                 className="mail-recipient-avatar"
-                style={{ backgroundColor: avatarColor(contact.email) }}
+                style = {{ backgroundColor: avatarColor(contact.email) }}
                 aria-hidden
               >
                 {avatarLabel(contact.email)}
@@ -237,8 +254,8 @@ const MailGroupMemberField = ({
                 <button
                   type="button"
                   className="mail-recipient-chip-remove"
-                  aria-label={`${contactLabel(contact)} 제거`}
-                  onClick={(e) => {
+                  aria-label = {`${contactLabel(contact)} 제거`}
+                  onClick = {(e) => {
                     e.stopPropagation();
                     removeAt(index);
                   }}
@@ -250,27 +267,28 @@ const MailGroupMemberField = ({
           ))}
           {!readOnly && (
             <input
-              ref={inputRef}
+              ref = {inputRef}
               type="text"
               className="mail-recipient-input"
-              value={draft}
-              placeholder={members.length === 0 ? "이름 또는 이메일" : "추가"}
-              onChange={(e) => {
+              value = {draft}
+              placeholder = {members.length === 0 ? "이름 또는 이메일" : "추가"}
+              onChange = {(e) => {
                 const value = e.target.value;
                 setDraft(value);
                 setOpen(true);
                 setActiveIndex(0);
               }}
-              onKeyDown={handleKeyDown}
-              onFocus={() => {
+              onKeyDown = {handleKeyDown}
+              onFocus = {() => {
                 setOpen(true);
                 setActiveIndex(menuItems.length > 0 ? 0 : -1);
               }}
-              onBlur={() => {
+              onBlur = {() => {
                 blurTimer.current = setTimeout(() => {
                   if (looksLikeEmail(draft)) {
                     commitDraft();
                   }
+
                   setOpen(false);
                 }, 150);
               }}
@@ -278,18 +296,20 @@ const MailGroupMemberField = ({
             />
           )}
         </div>
+
+        {/* 자동완성 */}
         {!readOnly && open && menuItems.length > 0 && (
           <ul className="mail-recipient-suggest" role="listbox">
             {menuItems.map((item, index) => (
-              <li key={item.kind === "new" ? `new:${item.email}` : contactKey(item.contact)}>
+              <li key = {item.kind === "new" ? `new:${item.email}` : contactKey(item.contact)}>
                 <button
                   type="button"
-                  className={
+                  className = {
                     index === activeIndex
                       ? "mail-recipient-suggest-item active"
                       : "mail-recipient-suggest-item"
                   }
-                  onMouseDown={(e) => {
+                  onMouseDown = {(e) => {
                     e.preventDefault();
                     if (item.kind === "new") {
                       addNewEmail(item.email);

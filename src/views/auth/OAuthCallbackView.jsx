@@ -25,7 +25,7 @@ const OAuthCallbackView = () => {
       return;
     }
 
-    // 로그인 시작할 때 넣어 둔 verifier·state와 맞는지 본다.
+    // 로그인 시작할 때 넣어 둔 verifier·state와 맞는지 확인.
     const { codeVerifier, state: savedState } = consumePkceSession();
     if (!codeVerifier || state !== savedState) {
       setError("Invalid OAuth state. Please try logging in again.");
@@ -39,7 +39,7 @@ const OAuthCallbackView = () => {
         redirectUri: import.meta.env.VITE_OAUTH_REDIRECT_URI,
       })
       .then(async () => {
-        // SNS 첫 로그인이면 아이디를 고르게 한다.
+        // SNS 첫 로그인이면 아이디를 고르게 하는 이동.
         const statusRes = await API.authAPI.getOnboardingStatus();
         if (statusRes.data?.needsUserId) {
           navigate("/onboarding");
@@ -54,7 +54,10 @@ const OAuthCallbackView = () => {
   }, [searchParams, navigate]);
 
   return (
-    <OAuthCallback error={error} onBackToLogin={() => navigate("/login")} />
+    <OAuthCallback
+      error = {error} // 교환 실패 메시지
+      onBackToLogin = {() => navigate("/login")} // 로그인 화면으로
+    />
   );
 };
 

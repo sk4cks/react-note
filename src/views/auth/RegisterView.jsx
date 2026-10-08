@@ -26,35 +26,39 @@ const RegisterView = () => {
   /** 위 status + 확인 당시 userId (폼 아이디와 다를 때는 결과를 무시) */
   const [userIdCheck, setUserIdCheck] = useState(IDLE_USER_ID_CHECK);
 
-  /** 아이디가 바뀌면 중복확인 결과를 버린다. */
+  /** 아이디가 바뀌면 버리는 중복확인 결과. */
   const updateUserInfo = (updater) => {
     setUserInfo((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       if (next.userId !== prev.userId) {
         setUserIdCheck(IDLE_USER_ID_CHECK);
       }
+
       return next;
     });
   };
 
-  /** 아이디 길이·문자 규칙을 검사한다. */
+  /** 아이디 길이·문자 규칙 검사. */
   const validateUserIdFormat = (userId) => {
     if (!userId) {
       alert("아이디를 입력해 주세요.");
       return false;
     }
+
     if (userId.length < 3) {
       alert("아이디는 3자 이상이어야 합니다.");
       return false;
     }
+
     if (!USER_ID_PATTERN.test(userId)) {
       alert("아이디는 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.");
       return false;
     }
+
     return true;
   };
 
-  /** Auth에 아이디 사용 가능 여부를 묻는다. */
+  /** Auth에 묻는 아이디 사용 가능 여부. */
   const handleCheckUserId = async () => {
     const { userId } = userInfo;
 
@@ -88,26 +92,30 @@ const RegisterView = () => {
     }
   };
 
-  /** 로컬 계정을 만들고 로그인 화면으로 보낸다. */
+  /** 로컬 계정을 만들고 로그인 화면으로 보내는 가입. */
   const handleRegister = async () => {
     const { userId, password, passwordConfirm } = userInfo;
 
-    // 중복확인을 통과한 그 아이디로만 가입한다.
+    // 중복확인을 통과한 그 아이디로만 하는 가입.
     if (!validateUserIdFormat(userId)) {
       return;
     }
+
     if (userIdCheck.status !== "available" || userIdCheck.userId !== userId) {
       alert("아이디 중복 확인을 먼저 해 주세요.");
       return;
     }
+
     if (!password) {
       alert("비밀번호를 입력해 주세요.");
       return;
     }
+
     if (password.length < 4) {
       alert("비밀번호는 4자 이상이어야 합니다.");
       return;
     }
+
     if (password !== passwordConfirm) {
       alert("비밀번호가 일치하지 않습니다.");
       return;
@@ -130,7 +138,7 @@ const RegisterView = () => {
       const status = error.response?.status;
       const message = error.response?.data?.message;
       if (status === 409) {
-        // 가입 사이에 아이디가 선점되면 중복확인을 다시 하게 한다.
+        // 가입 사이에 아이디가 선점되면 다시 하게 하는 중복확인.
         setUserIdCheck({ status: "taken", userId });
         alert("이미 사용 중인 아이디입니다.");
       } else if (message) {
@@ -149,13 +157,13 @@ const RegisterView = () => {
 
   return (
     <Register
-      userInfo={userInfo}
-      setUserInfo={updateUserInfo}
-      handleRegister={handleRegister}
-      handleCheckUserId={handleCheckUserId}
-      isSubmitting={isSubmitting}
-      isChecking={isChecking}
-      userIdCheckStatus={userIdCheckStatus}
+      userInfo = {userInfo} // 아이디·비밀번호·확인
+      setUserInfo = {updateUserInfo} // 입력 수정
+      handleRegister = {handleRegister} // 가입
+      handleCheckUserId = {handleCheckUserId} // 아이디 중복 확인
+      isSubmitting = {isSubmitting} // 가입 요청 중
+      isChecking = {isChecking} // 중복 확인 중
+      userIdCheckStatus = {userIdCheckStatus} // idle | available | taken
     />
   );
 };

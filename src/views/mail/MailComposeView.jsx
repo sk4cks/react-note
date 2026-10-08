@@ -11,15 +11,16 @@ import {
 import { sanitizeMailHtml } from "../../utils/sanitizeMailHtml";
 
 const AUTOSAVE_MS = 2000;
-const DRAFT_ID_SESSION_KEY = "mailComposeDraftId";
-const DRAFT_SNAPSHOT_KEY = "mailComposeSnapshot";
+const DRAFT_ID_SESSION_KEY="mailComposeDraftId";
+const DRAFT_SNAPSHOT_KEY="mailComposeSnapshot";
 const HIDE_SAVE_MS = 200;
 
-/** 보낼 본문이 비었는지. 이미지만 있으면 비어 있지 않다. */
+/** 이미지만 있어도 비어 있지 않은 본문인지 확인. */
 const isEmptyMailHtml = (html) => {
   if (/<img\b/i.test(html ?? "")) {
     return false;
   }
+
   const text = (html ?? "")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/gi, " ")
@@ -29,7 +30,7 @@ const isEmptyMailHtml = (html) => {
   return text.length === 0;
 };
 
-/** 받는 사람·제목·본문·첨부가 모두 비면 초안을 만들지 않는다. */
+/** 받는 사람·제목·본문·첨부가 모두 비면 건너뛰는 초안 확인. */
 const isEmptyDraft = (form, attachments) => {
   const noRecipients =
     (form.to?.length ?? 0) === 0 &&
@@ -44,7 +45,7 @@ const isEmptyDraft = (form, attachments) => {
   );
 };
 
-/** 주소의 id가 저장 직후 바뀌었으면 세션에 남은 새 id로 다시 연다. */
+/** 저장 직후 id가 바뀌면 세션의 새 id로 다시 여는 초안 조회. */
 const fetchDraft = async (requestedId) => {
   try {
     const response = await API.mailAPI.getMessage(requestedId, "draft");
@@ -64,7 +65,7 @@ const fetchDraft = async (requestedId) => {
   }
 };
 
-/** 새로고침 직후 IMAP id가 바뀌었을 때 마지막 작성 내용을 되돌린다. */
+/** 새로고침 직후 IMAP id가 바뀌었을 때 되돌리는 마지막 작성 내용. */
 const readDraftSnapshot = () => {
   try {
     const raw = sessionStorage.getItem(DRAFT_SNAPSHOT_KEY);
@@ -107,7 +108,7 @@ const MailComposeView = () => {
   const queuedRef = useRef(false);
   const dirtyRef = useRef(false);
   const editGenRef = useRef(0);
-  // 초안 로드·Quill 첫 onChange는 수정으로 치지 않는다.
+  // 초안 로드와 Quill 첫 onChange는 수정으로 치지 않는 표시.
   const ignoreChangesRef = useRef(Boolean(draftIdFromRoute));
   const loadedIdRef = useRef(null);
   const saveDraftRef = useRef(async () => null);
@@ -119,7 +120,7 @@ const MailComposeView = () => {
   sendingRef.current = sending;
   loadingDraftRef.current = loadingDraft;
 
-  /** 작성 폼 한 칸을 바꾼다. */
+  /** 작성 폼 한 칸 수정. */
   const handleChange = (field, value) => {
     setForm((prev) => {
       if (prev[field] === value) {
@@ -135,7 +136,7 @@ const MailComposeView = () => {
     });
   };
 
-  /** 첨부 목록을 바꾼다. */
+  /** 첨부 목록 수정. */
   const handleAttachmentsChange = (next) => {
     if (!ignoreChangesRef.current) {
       dirtyRef.current = true;
@@ -286,7 +287,7 @@ const MailComposeView = () => {
             );
 
           } catch {
-            // 첨부만 실패해도 본문은 연다.
+            // 첨부만 실패해도 여는 본문.
           }
         }
 
@@ -388,11 +389,11 @@ const MailComposeView = () => {
       );
 
     } catch {
-      // 용량이 모자라면 서버 id만으로 연다.
+      // 용량이 모자라면 서버 id만으로 여는 초안.
     }
   }, [form, draftId, loadingDraft, error]);
 
-  /** 탭만 가리면 저장하고, 새로고침(pagehide)이면 저장을 취소한다. */
+  /** 탭만 가리면 저장하고, 새로고침이면 취소하는 임시저장. */
   useEffect(() => {
     let hideTimer = 0;
 
@@ -424,7 +425,7 @@ const MailComposeView = () => {
     };
   }, []);
 
-  /** 목록으로 돌아간다. 수정분이 있으면 저장이 끝난 뒤 이동한다. */
+  /** 수정분이 있으면 저장이 끝난 뒤 이동하는 목록 복귀. */
   const handleCancel = async () => {
     while (inFlightRef.current) {
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -438,7 +439,7 @@ const MailComposeView = () => {
     navigate("/mail", { state: { folder: draftIdFromRoute ? "draft" : "inbox" } });
   };
 
-  /** 메일을 보내고 보낸편지함으로 간다. */
+  /** 메일을 보내고 보낸편지함으로 가는 발송. */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -515,17 +516,17 @@ const MailComposeView = () => {
 
   return (
     <MailCompose
-      form={form}
-      attachments={attachments}
-      onChange={handleChange}
-      onAttachmentsChange={handleAttachmentsChange}
-      onSubmit={handleSubmit}
-      onCancel={handleCancel}
-      sending={sending}
-      onSuggest={suggestRecipients}
-      error={error}
-      saveStatus={saveStatus}
-      loading={loadingDraft}
+      form = {form} // 받는 사람·제목·본문
+      attachments = {attachments} // 첨부 목록
+      onChange = {handleChange} // 폼 한 칸 수정
+      onAttachmentsChange = {handleAttachmentsChange} // 첨부 목록 수정
+      onSubmit = {handleSubmit} // 발송
+      onCancel = {handleCancel} // 목록으로
+      sending = {sending} // 발송 요청 중
+      onSuggest = {suggestRecipients} // 수신자 자동완성 조회
+      error = {error} // google | generic | load | 서버 메시지
+      saveStatus = {saveStatus} // idle | saving | saved | error
+      loading = {loadingDraft} // 초안 조회 중
     />
   );
 };

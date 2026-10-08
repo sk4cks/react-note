@@ -1,8 +1,9 @@
 import httpClient from "@/api/httpClient.js";
 
 const userAPI = {
-  /** 로그인한 계정. */
-  getMe: () => httpClient.get("/api/me"),
+  /** 지금 로그인한 계정 조회. */
+  getMe: () =>
+    httpClient.get("/api/me"),
 };
 
 export { userAPI };

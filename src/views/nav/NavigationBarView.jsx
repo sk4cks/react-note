@@ -21,7 +21,7 @@ const NavigationBarView = () => {
       return;
     }
 
-    // access token 또는 refresh cookie가 있으면 /api/me로 로그인 표시를 맞춘다.
+    // access token 또는 refresh cookie가 있을 때 /api/me로 맞추는 로그인 표시.
     API.userAPI.getMe()
       .then((response) => {
         setIsLoggedIn(true);
@@ -36,7 +36,7 @@ const NavigationBarView = () => {
       });
   }, [location]);
 
-  /** 로그인 화면으로 보내거나 로그아웃한다. */
+  /** 로그인 화면으로 보내거나 세션을 지우는 로그아웃. */
   const handleAuth = async () => {
     if (isLoggedIn) {
       await clearAuth();
@@ -51,11 +51,11 @@ const NavigationBarView = () => {
   };
 
   return (
-    <NavigationBar 
-        navigate={navigate}
-        handleAuth={handleAuth}
-        isLoggedIn={isLoggedIn}
-        userId={userId}
+    <NavigationBar
+      navigate = {navigate} // 상단 메뉴 이동
+      handleAuth = {handleAuth} // 로그인 화면 또는 로그아웃
+      isLoggedIn = {isLoggedIn} // 로그인 여부
+      userId = {userId} // 로그아웃 버튼에 보일 아이디
     />
   );
 };

@@ -1,8 +1,8 @@
-/** 메일 목록. 아래로 내리면 더 불러온다. */
+/** 아래로 내리면 이어 불러오는 메일 목록. */
 import { Alert, Button, Form, ListGroup, OverlayTrigger, Spinner, Tooltip } from "react-bootstrap";
 import { formatMailDate } from "../../temp_data/mailData";
 
-/** 목록 줄 복원 아이콘. 휴지통에서 편지함으로 되돌린다. */
+/** 휴지통에서 편지함으로 되돌리는 목록 줄 복원 아이콘. */
 const RestoreIcon = () => {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -13,6 +13,7 @@ const RestoreIcon = () => {
     </svg>
   );
 };
+
 /** 목록 줄 삭제 아이콘. Gmail 휴지통과 같은 윤곽. */
 const TrashIcon = () => {
   return (
@@ -26,23 +27,23 @@ const TrashIcon = () => {
 };
 
 const MailInbox = ({
-  loading,
-  error,
-  onGoogleLogin,
-  folder = "inbox",
-  messages = [],
-  selectedIds = [],
-  onToggle,
-  onToggleAll,
-  onDeleteOne,
-  onDeleteSelected,
-  onRestoreOne,
-  onRestoreSelected,
-  deleting = false,
-  onSelect,
-  loadMoreRef,
-  hasMore,
-  loadingMore,
+  loading, // 첫 페이지 조회 중
+  error, // google | generic | delete | restore
+  onGoogleLogin, // Gmail 미연동 때 다시 로그인
+  folder = "inbox", // 지금 보는 편지함
+  messages = [], // 화면에 그릴 메일
+  selectedIds = [], // 체크된 메일 id
+  onToggle, // 한 통 체크
+  onToggleAll, // 보이는 메일 전체 체크
+  onDeleteOne, // 한 통 삭제
+  onDeleteSelected, // 체크한 메일 삭제
+  onRestoreOne, // 한 통 복원
+  onRestoreSelected, // 체크한 메일 복원
+  deleting = false, // 삭제·복원 요청 중
+  onSelect, // 한 통을 열어 상세·초안 이동
+  loadMoreRef, // 목록 맨 아래. 보이면 다음 페이지
+  hasMore, // 다음 페이지 있음
+  loadingMore, // 다음 페이지 조회 중
 }) => {
   if (loading) {
     return (
@@ -57,7 +58,7 @@ const MailInbox = ({
       <Alert variant="warning">
         Gmail 연동이 필요합니다. Google 계정으로 다시 로그인해 주세요.
         <div className="mt-2">
-          <button type="button" className="btn btn-sm btn-primary" onClick={onGoogleLogin}>
+          <button type="button" className="btn btn-sm btn-primary" onClick = {onGoogleLogin}>
             Google로 로그인
           </button>
         </div>
@@ -77,6 +78,8 @@ const MailInbox = ({
 
   return (
     <>
+
+      {/* 삭제·복원 실패 */}
       {error === "delete" && (
         <Alert variant="danger" className="mb-2">
           메일을 삭제하지 못했습니다.
@@ -87,21 +90,23 @@ const MailInbox = ({
           메일을 되돌리지 못했습니다.
         </Alert>
       )}
+
+      {/* 선택 막대 */}
       <div className="d-flex align-items-center gap-2 mb-2">
         <Form.Check
           className="mail-select-check"
-          checked={allSelected}
-          onChange={onToggleAll}
+          checked = {allSelected}
+          onChange = {onToggleAll}
           aria-label="전체 선택"
-          label={selectedIds.length > 0 ? `${selectedIds.length}개 선택` : "전체 선택"}
+          label = {selectedIds.length > 0 ? `${selectedIds.length}개 선택` : "전체 선택"}
         />
         {selectedIds.length > 0 && folder === "trash" && (
           <Button
             type="button"
             size="sm"
             variant="outline-secondary"
-            disabled={deleting}
-            onClick={onRestoreSelected}
+            disabled = {deleting}
+            onClick = {onRestoreSelected}
           >
             선택 복원
           </Button>
@@ -111,28 +116,30 @@ const MailInbox = ({
             type="button"
             size="sm"
             variant="outline-danger"
-            disabled={deleting}
-            onClick={onDeleteSelected}
+            disabled = {deleting}
+            onClick = {onDeleteSelected}
           >
             {folder === "trash" ? "선택 완전 삭제" : "선택 삭제"}
           </Button>
         )}
       </div>
+
+      {/* 메일 줄 */}
       <ListGroup>
         {messages.map((msg) => (
           <ListGroup.Item
-            key={msg.id}
+            key = {msg.id}
             action
-            onClick={() => onSelect(msg.id)}
-            className={`mail-list-item ${msg.unread ? "mail-unread" : "mail-read"}`}
+            onClick = {() => onSelect(msg.id)}
+            className = {`mail-list-item ${msg.unread ? "mail-unread" : "mail-read"}`}
           >
             <div className="d-flex align-items-start gap-2">
               <Form.Check
                 className="mail-select-check mt-1"
-                checked={selectedIds.includes(msg.id)}
+                checked = {selectedIds.includes(msg.id)}
                 aria-label="메일 선택"
-                onClick={(event) => event.stopPropagation()}
-                onChange={() => onToggle(msg.id)}
+                onClick = {(event) => event.stopPropagation()}
+                onChange = {() => onToggle(msg.id)}
               />
               <div className="mail-list-main flex-grow-1">
                 <div className="d-flex justify-content-between align-items-center gap-2">
@@ -148,10 +155,10 @@ const MailInbox = ({
                     {folder === "trash" && (
                       <OverlayTrigger
                         placement="left"
-                        container={document.body}
-                        popperConfig={{ strategy: "fixed" }}
-                        delay={{ show: 200, hide: 0 }}
-                        overlay={<Tooltip>원래 편지함으로 복원</Tooltip>}
+                        container = {document.body}
+                        popperConfig = {{ strategy: "fixed" }}
+                        delay = {{ show: 200, hide: 0 }}
+                        overlay = {<Tooltip>원래 편지함으로 복원</Tooltip>}
                       >
                         <Button
                           type="button"
@@ -159,8 +166,8 @@ const MailInbox = ({
                           size="sm"
                           className="mail-row-restore"
                           aria-label="원래 편지함으로 복원"
-                          disabled={deleting}
-                          onClick={(event) => {
+                          disabled = {deleting}
+                          onClick = {(event) => {
                             event.stopPropagation();
                             onRestoreOne(msg.id);
                           }}
@@ -171,19 +178,19 @@ const MailInbox = ({
                     )}
                     <OverlayTrigger
                       placement="left"
-                      container={document.body}
-                      popperConfig={{ strategy: "fixed" }}
-                      delay={{ show: 200, hide: 0 }}
-                      overlay={<Tooltip>{folder === "trash" ? "완전히 삭제" : "삭제"}</Tooltip>}
+                      container = {document.body}
+                      popperConfig = {{ strategy: "fixed" }}
+                      delay = {{ show: 200, hide: 0 }}
+                      overlay = {<Tooltip>{folder === "trash" ? "완전히 삭제" : "삭제"}</Tooltip>}
                     >
                       <Button
                         type="button"
                         variant="link"
                         size="sm"
                         className="mail-row-delete"
-                        aria-label={folder === "trash" ? "완전히 삭제" : "삭제"}
-                        disabled={deleting}
-                        onClick={(event) => {
+                        aria-label = {folder === "trash" ? "완전히 삭제" : "삭제"}
+                        disabled = {deleting}
+                        onClick = {(event) => {
                           event.stopPropagation();
                           onDeleteOne(msg.id);
                         }}
@@ -202,7 +209,7 @@ const MailInbox = ({
           </ListGroup.Item>
         ))}
         {hasMore && (
-          <div ref={loadMoreRef} className="mail-load-more text-center py-3">
+          <div ref = {loadMoreRef} className="mail-load-more text-center py-3">
             {loadingMore && <Spinner animation="border" size="sm" />}
           </div>
         )}

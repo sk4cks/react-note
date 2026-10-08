@@ -61,8 +61,7 @@ const hasDraggedFiles = (event) =>
   [...(event.dataTransfer?.types ?? [])].includes("Files");
 
 /**
- * 본문 이미지의 data URL은 수십만 자라 그대로 두면 소스를 읽을 수 없다.
- * 짧은 자리표시자로 접고 원본은 따로 들고 있다가 되돌린다.
+ * 긴 data URL을 짧은 자리표시자로 접고, 원본은 따로 두는 본문 축약.
  */
 const collapseDataUrls = (html) => {
   const images = [];
@@ -76,7 +75,7 @@ const collapseDataUrls = (html) => {
   return { collapsed, images };
 };
 
-/** 자리표시자를 원본 data URL로 되돌린다. 사용자가 고쳐 쓴 자리표시자는 복원되지 않는다. */
+/** 사용자가 고치지 않은 자리표시자만 원본 data URL로 되돌리는 복원. */
 const expandDataUrls = (html, images) => {
   return images.reduce(
     (acc, { placeholder, dataUrl }) => acc.split(placeholder).join(dataUrl),
@@ -86,17 +85,17 @@ const expandDataUrls = (html, images) => {
 
 /** 메일 쓰기 폼(수신자·본문·첨부). */
 const MailCompose = ({
-  form,
-  attachments = [],
-  onChange,
-  onAttachmentsChange,
-  onSubmit,
-  onCancel,
-  sending = false,
-  onSuggest,
-  error = null,
-  saveStatus = "idle",
-  loading = false,
+  form, // 받는 사람·제목·본문
+  attachments = [], // 첨부 목록
+  onChange, // 폼 한 칸 수정
+  onAttachmentsChange, // 첨부 목록 수정
+  onSubmit, // 발송
+  onCancel, // 목록으로
+  sending = false, // 발송 요청 중
+  onSuggest, // 수신자 자동완성 조회
+  error = null, // google | generic | load | 서버 메시지
+  saveStatus = "idle", // idle | saving | saved | error
+  loading = false, // 초안 조회 중
 }) => {
   const quillRef = useRef(null); // ReactQuill
   const fileInputRef = useRef(null); // 숨긴 첨부 파일 input
@@ -117,12 +116,13 @@ const MailCompose = ({
     if ((form.cc?.length ?? 0) > 0) {
       setShowCc(true);
     }
+
     if ((form.bcc?.length ?? 0) > 0) {
       setShowBcc(true);
     }
   }, [form.cc, form.bcc]);
 
-  /** 본문 data URL을 짧게 접고 소스 편집으로 바꾼다. */
+  /** 본문 data URL을 짧은 자리표시자로 접는 소스 편집 전환. */
   const openSourceView = () => {
     const { collapsed, images } = collapseDataUrls(form.body ?? "");
     inlineImagesRef.current = images;
@@ -130,22 +130,23 @@ const MailCompose = ({
     setSourceMode(true);
   };
 
-  /** 소스 편집 내용을 본문에 반영한다. 자리표시자는 원본 URL로 되돌린다. */
+  /** 소스 편집을 본문에 반영하고, 자리표시자는 원본 URL로 되돌리는 적용. */
   const handleHtmlDraftChange = (value) => {
     setHtmlDraft(value);
     onChange("body", expandDataUrls(value, inlineImagesRef.current));
   };
 
-  /** 본문+첨부가 10MB를 넘으면 막는다. */
+  /** 본문과 첨부 합이 10MB를 넘으면 막는 용량 확인. */
   const ensureWithinLimit = useCallback((nextHtml, nextAttachments) => {
     if (mailPayloadBytes(nextHtml, nextAttachments) > MAIL_MAX_BYTES) {
       alert("이미지와 첨부파일을 합쳐 10MB를 넘을 수 없습니다.");
       return false;
     }
+
     return true;
   }, []);
 
-  /** 이미지를 본문에 data URL로 넣는다. */
+  /** 이미지를 본문 data URL로 넣는 삽입. */
   const insertImageFile = useCallback(
     async (file) => {
       if (!file?.type?.startsWith("image/")) {
@@ -158,7 +159,7 @@ const MailCompose = ({
         return;
       }
 
-      // 용량을 통과하면 커서 위치에 넣는다.
+      // 용량을 통과한 이미지의 커서 위치 삽입.
       const quill = quillRef.current?.getEditor?.();
       if (!quill) {
         return;
@@ -172,17 +173,18 @@ const MailCompose = ({
     [ensureWithinLimit]
   );
 
-  /** 툴바 이미지 버튼 — 파일을 고르면 본문에 넣는다. */
+  /** 툴바에서 고른 이미지 파일의 본문 삽입. */
   const imageHandler = useCallback(() => {
     const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
+    input.type="file";
+    input.accept="image/*";
     input.onchange = async () => {
       const file = input.files?.[0];
       if (file) {
         await insertImageFile(file);
       }
     };
+
     input.click();
   }, [insertImageFile]);
 
@@ -193,7 +195,7 @@ const MailCompose = ({
         handlers: { image: imageHandler },
       },
       // Quill 기본 uploader가 붙여넣기·드롭 이미지를 자체 삽입해 아래 paste/drop
-      // 핸들러와 이중으로 들어간다. 용량 검사를 하는 우리 쪽만 남긴다.
+      // 핸들러와 겹치지 않게, 용량 검사하는 쪽만 남기는 정리.
       // (mimetypes를 비우는 방식은 Quill이 옵션을 deep merge 해서 통하지 않는다)
       uploader: { handler: () => {} },
     }),
@@ -205,16 +207,18 @@ const MailCompose = ({
     let root; // quill.root. cleanup에서 리스너를 뗌
     let onPaste;
     let frames = 0; // 에디터 대기 프레임. 60이면 포기
-    /** Quill이 준비되면 붙여넣기 이미지를 넣는다. */
+    /** Quill이 준비된 뒤 붙여넣는 이미지 삽입. */
     const tryAttach = () => {
       const quill = quillRef.current?.getEditor?.();
       if (!quill) {
-        // 에디터가 아직 없으면 다음 프레임에 다시 본다.
+        // 에디터가 없으면 다음 프레임에 다시 보는 대기.
         if (!cancelled && frames++ < 60) {
           requestAnimationFrame(tryAttach);
         }
+
         return;
       }
+
       root = quill.root;
       onPaste = (event) => {
         const file = [...(event.clipboardData?.files ?? [])].find((item) =>
@@ -223,11 +227,14 @@ const MailCompose = ({
         if (!file) {
           return;
         }
+
         event.preventDefault();
         insertImageFile(file);
       };
+
       root.addEventListener("paste", onPaste);
     };
+
     tryAttach();
 
     return () => {
@@ -238,7 +245,7 @@ const MailCompose = ({
     };
   }, [insertImageFile]);
 
-  /** 고른 파일을 첨부 목록에 넣는다. */
+  /** 고른 파일을 첨부 목록에 더하는 추가. */
   const addAttachmentFiles = async (files) => {
     if (files.length === 0) {
       return;
@@ -249,7 +256,7 @@ const MailCompose = ({
       return;
     }
 
-    // 파일마다 용량을 더해가며 붙인다. 넘치면 그 파일부터 버린다.
+    // 용량을 더해 가며 붙이다가, 넘는 파일부터 버리는 첨부.
     const next = [...attachmentsRef.current];
 
     for (const file of files) {
@@ -261,6 +268,7 @@ const MailCompose = ({
         contentBase64: dataUrlToBase64(dataUrl),
         size: file.size,
       };
+
       const candidate = [...next, item];
 
       if (!ensureWithinLimit(formRef.current.body, candidate)) {
@@ -273,14 +281,14 @@ const MailCompose = ({
     onAttachmentsChange(next);
   };
 
-  /** 파일 선택창에서 고른 첨부를 넣는다. */
+  /** 파일 선택창에서 고른 첨부 추가. */
   const handleFilesSelected = async (event) => {
     const files = [...(event.target.files ?? [])];
-    event.target.value = "";
+    event.target.value="";
     await addAttachmentFiles(files);
   };
 
-  /** 작성 카드 위로 파일을 끌면 첨부 가능하다고 표시한다. */
+  /** 작성 카드 위로 파일을 끌 때의 첨부 가능 표시. */
   const handleFileDragEnter = (event) => {
     if (!hasDraggedFiles(event)) {
       return;
@@ -291,17 +299,17 @@ const MailCompose = ({
     setFileDrag(true);
   };
 
-  /** 작성 카드 안에서 드롭을 허용한다. */
+  /** 작성 카드 안에서의 드롭 허용. */
   const handleFileDragOver = (event) => {
     if (!hasDraggedFiles(event)) {
       return;
     }
 
     event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
+    event.dataTransfer.dropEffect="copy";
   };
 
-  /** 자식 요소를 지나도 테두리가 깜빡이지 않게 깊이를 센다. */
+  /** 자식 요소를 지나도 테두리가 깜빡이지 않게 세는 드래그 깊이. */
   const handleFileDragLeave = (event) => {
     if (!hasDraggedFiles(event)) {
       return;
@@ -316,7 +324,7 @@ const MailCompose = ({
     }
   };
 
-  /** 본문 위 이미지는 삽입, 그 외 파일은 첨부한다. */
+  /** 본문 위 이미지는 삽입하고, 그 외 파일은 첨부하는 드롭. */
   const handleFileDrop = async (event) => {
     const files = [...(event.dataTransfer?.files ?? [])];
 
@@ -342,7 +350,7 @@ const MailCompose = ({
     await addAttachmentFiles(files);
   };
 
-  /** 첨부 칩을 뺀다. */
+  /** 첨부 칩 삭제. */
   const removeAttachment = (id) => {
     onAttachmentsChange(attachments.filter((item) => item.id !== id));
   };
@@ -357,6 +365,8 @@ const MailCompose = ({
 
   return (
     <>
+
+      {/* 발송·불러오기 오류 */}
       {error === "google" && (
         <Alert variant="warning" className="mb-3">
           Gmail 발송 권한이 없습니다. Google 계정으로 다시 로그인해 주세요.
@@ -371,32 +381,35 @@ const MailCompose = ({
               : error}
         </Alert>
       )}
+
       <Card
-        className={`mail-compose-card${fileDrag ? " mail-compose-drop-active" : ""}`}
-        onDragEnter={handleFileDragEnter}
-        onDragOver={handleFileDragOver}
-        onDragLeave={handleFileDragLeave}
-        onDrop={handleFileDrop}
+        className = {`mail-compose-card${fileDrag ? " mail-compose-drop-active" : ""}`}
+        onDragEnter = {handleFileDragEnter}
+        onDragOver = {handleFileDragOver}
+        onDragLeave = {handleFileDragLeave}
+        onDrop = {handleFileDrop}
       >
         <Card.Header>새 메일</Card.Header>
         <Card.Body>
-        <Form onSubmit={onSubmit}>
+        <Form onSubmit = {onSubmit}>
+
+          {/* 받는 사람·참조·숨은참조 */}
           <MailRecipientField
-            id="mailTo"
-            label="받는 사람"
-            values={form.to}
-            onChange={(value) => onChange("to", value)}
-            onSuggest={onSuggest}
-            placeholder="받는 사람"
-            required
-            trailing={
+            id="mailTo" // input id
+            label="받는 사람" // 필드 이름
+            values = {form.to} // 칩으로 확정된 주소
+            onChange = {(value) => onChange("to", value)} // 칩 목록 수정
+            onSuggest = {onSuggest} // 주소록·최근 수신자 조회
+            placeholder="받는 사람" // 입력칸 안내
+            required // 받는 사람만 필수
+            trailing = { // 참조·숨은참조 버튼
               !showCc || !showBcc ? (
                 <>
                   {!showCc && (
                     <Button
                       type="button"
                       variant="link"
-                      onClick={() => setShowCc(true)}
+                      onClick = {() => setShowCc(true)}
                     >
                       참조
                     </Button>
@@ -405,7 +418,7 @@ const MailCompose = ({
                     <Button
                       type="button"
                       variant="link"
-                      onClick={() => setShowBcc(true)}
+                      onClick = {() => setShowBcc(true)}
                     >
                       숨은참조
                     </Button>
@@ -416,34 +429,38 @@ const MailCompose = ({
           />
           {showCc && (
             <MailRecipientField
-              id="mailCc"
-              label="참조"
-              values={form.cc}
-              onChange={(value) => onChange("cc", value)}
-              onSuggest={onSuggest}
-              placeholder="참조"
+              id="mailCc" // input id
+              label="참조" // 필드 이름
+              values = {form.cc} // 칩으로 확정된 주소
+              onChange = {(value) => onChange("cc", value)} // 칩 목록 수정
+              onSuggest = {onSuggest} // 주소록·최근 수신자 조회
+              placeholder="참조" // 입력칸 안내
             />
           )}
           {showBcc && (
             <MailRecipientField
-              id="mailBcc"
-              label="숨은참조"
-              values={form.bcc}
-              onChange={(value) => onChange("bcc", value)}
-              onSuggest={onSuggest}
-              placeholder="숨은참조"
+              id="mailBcc" // input id
+              label="숨은참조" // 필드 이름
+              values = {form.bcc} // 칩으로 확정된 주소
+              onChange = {(value) => onChange("bcc", value)} // 칩 목록 수정
+              onSuggest = {onSuggest} // 주소록·최근 수신자 조회
+              placeholder="숨은참조" // 입력칸 안내
             />
           )}
+
+          {/* 제목 */}
           <Form.Group className="mb-3" controlId="mailSubject">
             <Form.Label>제목</Form.Label>
             <Form.Control
               type="text"
               placeholder="제목"
-              value={form.subject}
-              onChange={(e) => onChange("subject", e.target.value)}
+              value = {form.subject}
+              onChange = {(e) => onChange("subject", e.target.value)}
               required
             />
           </Form.Group>
+
+          {/* 본문 */}
           <Form.Group className="mb-3" controlId="mailBody">
             <div className="d-flex justify-content-between align-items-center mb-1">
               <Form.Label className="mb-0">내용</Form.Label>
@@ -455,10 +472,10 @@ const MailCompose = ({
                 <Button
                   type="button"
                   variant="outline-secondary"
-                  active={!sourceMode}
-                  aria-pressed={!sourceMode}
+                  active = {!sourceMode}
+                  aria-pressed = {!sourceMode}
                   title="편집기"
-                  onClick={() => setSourceMode(false)}
+                  onClick = {() => setSourceMode(false)}
                 >
                   <RichTextIcon />
                   <span className="visually-hidden">편집기</span>
@@ -466,25 +483,26 @@ const MailCompose = ({
                 <Button
                   type="button"
                   variant="outline-secondary"
-                  active={sourceMode}
-                  aria-pressed={sourceMode}
+                  active = {sourceMode}
+                  aria-pressed = {sourceMode}
                   title="HTML 소스"
-                  onClick={openSourceView}
+                  onClick = {openSourceView}
                 >
                   <SourceIcon />
                   <span className="visually-hidden">HTML 소스</span>
                 </Button>
               </ButtonGroup>
             </div>
-            {/* 탭을 오갈 때 Quill이 다시 마운트되지 않도록 감추기만 한다 */}
-            <div className={sourceMode ? "d-none" : undefined}>
+
+            {/* 탭을 오가도 Quill을 다시 마운트하지 않는 숨김 */}
+            <div className = {sourceMode ? "d-none" : undefined}>
               <ReactQuill
-                ref={quillRef}
+                ref = {quillRef}
                 theme="snow"
                 className="mail-compose-editor"
-                value={form.body}
-                onChange={(html) => onChange("body", html)}
-                modules={modules}
+                value = {form.body}
+                onChange = {(html) => onChange("body", html)}
+                modules = {modules}
                 placeholder="메일 내용"
               />
             </div>
@@ -493,9 +511,9 @@ const MailCompose = ({
                 <Form.Control
                   as="textarea"
                   className="mail-compose-source"
-                  value={htmlDraft}
-                  onChange={(e) => handleHtmlDraftChange(e.target.value)}
-                  spellCheck={false}
+                  value = {htmlDraft}
+                  onChange = {(e) => handleHtmlDraftChange(e.target.value)}
+                  spellCheck = {false}
                   placeholder="<p>메일 내용</p>"
                 />
                 {inlineImagesRef.current.length > 0 && (
@@ -507,19 +525,21 @@ const MailCompose = ({
               </>
             )}
           </Form.Group>
+
+          {/* 첨부 */}
           <div className="mail-compose-attachments mb-3">
             <input
-              ref={fileInputRef}
+              ref = {fileInputRef}
               type="file"
               multiple
               hidden
-              onChange={handleFilesSelected}
+              onChange = {handleFilesSelected}
             />
             <Button
               type="button"
               variant="outline-secondary"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              onClick = {() => fileInputRef.current?.click()}
             >
               파일 첨부
             </Button>
@@ -529,7 +549,7 @@ const MailCompose = ({
             {attachments.length > 0 && (
               <ul className="mail-attachment-list mt-2 mb-0">
                 {attachments.map((item) => (
-                  <li key={item.id} className="mail-attachment-item">
+                  <li key = {item.id} className="mail-attachment-item">
                     <span className="mail-attachment-name">{item.filename}</span>
                     <span className="mail-attachment-size text-muted">
                       {formatBytes(item.size)}
@@ -539,7 +559,7 @@ const MailCompose = ({
                       variant="link"
                       size="sm"
                       className="p-0"
-                      onClick={() => removeAttachment(item.id)}
+                      onClick = {() => removeAttachment(item.id)}
                     >
                       삭제
                     </Button>
@@ -548,11 +568,13 @@ const MailCompose = ({
               </ul>
             )}
           </div>
+
+          {/* 보내기·취소·임시저장 상태 */}
           <div className="d-flex align-items-center gap-2">
-            <Button type="submit" variant="primary" disabled={sending}>
+            <Button type="submit" variant="primary" disabled = {sending}>
               {sending ? "보내는 중..." : "보내기"}
             </Button>
-            <Button type="button" variant="outline-secondary" onClick={onCancel}>
+            <Button type="button" variant="outline-secondary" onClick = {onCancel}>
               취소
             </Button>
             {saveStatus === "saving" && (

@@ -6,7 +6,7 @@ import { contactKey } from "../../components/mail/MailGroupMemberField";
 
 const emptyContact = { displayName: "", email: "" }; // 연락처 추가 폼 초기값
 
-/** 그룹 저장 API용으로 개인 연락처 id와 계정 seq를 나눈다. */
+/** 그룹 저장 API용 개인 연락처 id와 계정 seq 분리. */
 const splitMemberKeys = (members) => {
   const contactIds = []; // MAIL_CONTACT
   const accountUserSeqs = []; // SYS_USER
@@ -14,6 +14,7 @@ const splitMemberKeys = (members) => {
     if (contact.pending) {
       continue;
     }
+
     const key = contactKey(contact);
     if (key.startsWith("a:")) {
       accountUserSeqs.push(Number(key.slice(2)));
@@ -21,6 +22,7 @@ const splitMemberKeys = (members) => {
       contactIds.push(Number(key.slice(2)));
     }
   }
+
   return { contactIds, accountUserSeqs };
 };
 
@@ -63,7 +65,7 @@ const MailContactsView = () => {
     canWrite &&
     membersSignature(draftMembers) !== membersSignature(selectedGroup?.members ?? []); // 멤버 저장 버튼
 
-  /** 연락처·그룹 목록을 다시 읽는다. */
+  /** 연락처·그룹 목록 다시 조회. */
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -104,14 +106,14 @@ const MailContactsView = () => {
       return;
     }
 
-    // 고른 그룹의 공유 목록만 따로 불러온다.
+    // 고른 그룹만 따로 불러오는 공유 목록.
     API.contactAPI
       .listShares(selectedGroupId)
       .then((response) => setShares(response.data ?? []))
       .catch(() => setShares([]));
   }, [selectedGroupId]);
 
-  /** 개인 연락처를 추가한다. */
+  /** 개인 연락처 추가. */
   const handleCreateContact = async (e) => {
     e.preventDefault();
 
@@ -125,7 +127,7 @@ const MailContactsView = () => {
     }
   };
 
-  /** 개인 연락처를 지운다. */
+  /** 개인 연락처 삭제. */
   const handleDeleteContact = async (id) => {
     try {
       await API.contactAPI.deleteContact(id);
@@ -136,7 +138,7 @@ const MailContactsView = () => {
     }
   };
 
-  /** 새 그룹을 만든다. */
+  /** 새 그룹 생성. */
   const handleCreateGroup = async (e) => {
     e.preventDefault();
 
@@ -151,7 +153,7 @@ const MailContactsView = () => {
     }
   };
 
-  /** pending 이메일을 연락처로 만든 뒤 그룹 멤버를 저장한다. */
+  /** pending 이메일을 연락처로 만든 뒤 저장하는 그룹 멤버. */
   const handleSaveMembers = async () => {
     if (!selectedGroupId || !membersDirty) {
       return;
@@ -160,7 +162,7 @@ const MailContactsView = () => {
     setSavingMembers(true);
 
     try {
-      // 저장 전까지는 칩만 있는 이메일을 개인 연락처로 만든다.
+      // 저장 전까지 칩만 있던 이메일의 개인 연락처 생성.
       const pending = draftMembers.filter((member) => member.pending);
       await Promise.all(
         pending.map((member) =>
@@ -175,17 +177,18 @@ const MailContactsView = () => {
 
       let book = contacts; // 방금 만든 연락처가 포함된 주소록
       if (pending.length > 0) {
-        // 방금 만든 연락처 id를 받으려면 목록을 다시 읽는다.
+        // 방금 만든 연락처 id를 받으려고 다시 읽는 목록.
         const listed = await API.contactAPI.listContacts();
         book = listed.data ?? [];
         setContacts(book);
       }
 
-      // pending 칩을 방금 만든 연락처로 바꾼다.
+      // pending 칩을 방금 만든 연락처로 바꾸는 교체.
       const resolved = draftMembers.map((member) => {
         if (!member.pending) {
           return member;
         }
+
         return (
           book.find(
             (contact) => contact.email.toLowerCase() === member.email.toLowerCase()
@@ -196,7 +199,7 @@ const MailContactsView = () => {
         throw new Error("create");
       }
 
-      // pending이 다 연락처가 되면 그룹 멤버를 통째로 저장한다.
+      // pending이 다 연락처가 된 뒤의 그룹 멤버 전체 저장.
       const response = await API.contactAPI.replaceMembers(
         selectedGroupId,
         splitMemberKeys(resolved)
@@ -217,7 +220,7 @@ const MailContactsView = () => {
     }
   };
 
-  /** 공유를 넣거나 권한을 바꾼다. */
+  /** 공유를 넣거나 권한을 바꾸는 수정. */
   const applyShare = async (sharedWithUserId, permission) => {
     const response = await API.contactAPI.shareGroup(selectedGroup.id, {
       sharedWithUserId,
@@ -227,16 +230,17 @@ const MailContactsView = () => {
     setShares((prev) => {
       const index = prev.findIndex((share) => share.id === saved.id);
       if (index >= 0) {
-        // 같은 사용자면 권한만 갈아끼운다.
+        // 같은 사용자면 권한만 바꾸는 교체.
         const next = [...prev];
         next[index] = saved;
         return next;
       }
+
       return [...prev, saved];
     });
   };
 
-  /** 공유 폼 제출. 이미 있으면 권한 변경을 묻는다. */
+  /** 이미 있으면 권한 변경을 묻는 공유 폼 제출. */
   const handleShare = async (e) => {
     e.preventDefault();
 
@@ -248,12 +252,13 @@ const MailContactsView = () => {
     if (!targetId) {
       return;
     }
+
     if (targetId === selectedGroup.ownerUserId || targetId === myUserId) {
       window.alert("등록자나 본인에게는 공유할 수 없습니다.");
       return;
     }
 
-    // 이미 공유된 사용자는 권한만 바꿀지 묻는다.
+    // 이미 공유된 사용자에게 권한만 바꿀지 묻는 확인.
     const existing = shares.find(
       (share) => share.sharedWithUserId.toLowerCase() === targetId.toLowerCase()
     );
@@ -262,6 +267,7 @@ const MailContactsView = () => {
         window.alert("이미 공유된 사용자입니다.");
         return;
       }
+
       if (
         !window.confirm(
           `이미 공유된 사용자입니다. 권한을 ${permissionLabel(sharePermission)}(으)로 변경할까요?`
@@ -280,11 +286,12 @@ const MailContactsView = () => {
     }
   };
 
-  /** 목록에서 공유 권한을 바로 바꾼다. */
+  /** 목록에서 바로 바꾸는 공유 권한. */
   const handleChangeSharePermission = async (share, permission) => {
     if (!selectedGroup || share.permission === permission) {
       return;
     }
+
     if (share.sharedWithUserId === myUserId) {
       return;
     }
@@ -297,7 +304,7 @@ const MailContactsView = () => {
     }
   };
 
-  /** 공유를 회수하거나 공유받은 그룹에서 나간다. */
+  /** 공유 회수, 또는 공유받은 그룹에서 나가는 탈퇴. */
   const handleRevoke = async (shareId) => {
     if (!selectedGroup) {
       return;
@@ -312,13 +319,14 @@ const MailContactsView = () => {
     try {
       await API.contactAPI.revokeShare(selectedGroup.id, shareId);
       if (leaving) {
-        // 공유받은 쪽에서 나가면 목록에서 그룹을 뺀다.
+        // 공유받은 쪽에서 나가면 목록에서 빼는 그룹.
         const groupId = selectedGroup.id;
         setGroups((prev) => prev.filter((group) => group.id !== groupId));
         setSelectedGroupId(null);
         setShares([]);
         return;
       }
+
       setShares((prev) => prev.filter((share) => share.id !== shareId));
 
     } catch {
@@ -326,7 +334,7 @@ const MailContactsView = () => {
     }
   };
 
-  /** 등록자가 그룹 이름을 바꾼다. */
+  /** 등록자의 그룹 이름 수정. */
   const handleRenameGroup = async (e) => {
     e.preventDefault();
 
@@ -338,6 +346,7 @@ const MailContactsView = () => {
     if (!name || name === selectedGroup.name) {
       return;
     }
+
     setSavingName(true);
 
     try {
@@ -358,11 +367,12 @@ const MailContactsView = () => {
     }
   };
 
-  /** 등록자가 그룹을 삭제한다. */
+  /** 등록자의 그룹 삭제. */
   const handleDeleteGroup = async () => {
     if (!selectedGroup?.owned) {
       return;
     }
+
     if (
       !window.confirm(
         `'${selectedGroup.name}' 그룹을 삭제할까요? 멤버와 공유도 함께 삭제됩니다.`
@@ -388,46 +398,46 @@ const MailContactsView = () => {
 
   return (
     <MailContacts
-      loading={loading}
-      error={error}
-      onCloseError={() => setError(null)}
-      tab={tab}
-      onTab={setTab}
-      contactForm={contactForm}
-      onContactFormChange={handleContactFormChange}
-      onCreateContact={handleCreateContact}
-      contacts={contacts}
-      onDeleteContact={handleDeleteContact}
-      groupName={groupName}
-      onGroupNameChange={setGroupName}
-      onCreateGroup={handleCreateGroup}
-      groups={groups}
-      selectedGroupId={selectedGroupId}
-      onSelectGroup={setSelectedGroupId}
-      selectedGroup={selectedGroup}
-      groupPanelTab={groupPanelTab}
-      onGroupPanelTab={setGroupPanelTab}
-      canWrite={canWrite}
-      draftMembers={draftMembers}
-      onDraftMembersChange={setDraftMembers}
-      membersDirty={membersDirty}
-      savingMembers={savingMembers}
-      onSaveMembers={handleSaveMembers}
-      shareUserId={shareUserId}
-      onShareUserIdChange={setShareUserId}
-      sharePermission={sharePermission}
-      onSharePermissionChange={setSharePermission}
-      onShare={handleShare}
-      shares={shares}
-      myUserId={myUserId}
-      permissionLabel={permissionLabel}
-      onChangeSharePermission={handleChangeSharePermission}
-      onRevoke={handleRevoke}
-      renameDraft={renameDraft}
-      onRenameDraftChange={setRenameDraft}
-      savingName={savingName}
-      onRenameGroup={handleRenameGroup}
-      onDeleteGroup={handleDeleteGroup}
+      loading = {loading} // 연락처·그룹 조회 중
+      error = {error} // 실패 메시지
+      onCloseError = {() => setError(null)} // 오류 알림 닫기
+      tab = {tab} // contacts | groups
+      onTab = {setTab} // 연락처·그룹 탭 이동
+      contactForm = {contactForm} // 연락처 추가 입력
+      onContactFormChange = {handleContactFormChange} // 연락처 폼 한 칸 수정
+      onCreateContact = {handleCreateContact} // 개인 연락처 추가
+      contacts = {contacts} // 개인 연락처와 계정
+      onDeleteContact = {handleDeleteContact} // 개인 연락처 삭제
+      groupName = {groupName} // 새 그룹 이름
+      onGroupNameChange = {setGroupName} // 새 그룹 이름 수정
+      onCreateGroup = {handleCreateGroup} // 그룹 생성
+      groups = {groups} // 내 그룹과 공유받은 그룹
+      selectedGroupId = {selectedGroupId} // 고른 그룹 id
+      onSelectGroup = {setSelectedGroupId} // 그룹 선택
+      selectedGroup = {selectedGroup} // 고른 그룹 상세
+      groupPanelTab = {groupPanelTab} // members | share | info
+      onGroupPanelTab = {setGroupPanelTab} // 멤버·공유·정보 탭 이동
+      canWrite = {canWrite} // 멤버·공유 수정 가능
+      draftMembers = {draftMembers} // 저장 전 멤버 칩
+      onDraftMembersChange = {setDraftMembers} // 멤버 칩 수정
+      membersDirty = {membersDirty} // 저장 안 한 멤버 변경
+      savingMembers = {savingMembers} // 멤버 저장 중
+      onSaveMembers = {handleSaveMembers} // 멤버 저장
+      shareUserId = {shareUserId} // 공유할 USER_ID
+      onShareUserIdChange = {setShareUserId} // 공유 대상 수정
+      sharePermission = {sharePermission} // READ | WRITE
+      onSharePermissionChange = {setSharePermission} // 공유 권한 수정
+      onShare = {handleShare} // 공유 추가
+      shares = {shares} // 이 그룹의 공유 목록
+      myUserId = {myUserId} // 내 USER_ID. 나가기 구분
+      permissionLabel = {permissionLabel} // 권한 표시 문구
+      onChangeSharePermission = {handleChangeSharePermission} // 목록에서 권한 수정
+      onRevoke = {handleRevoke} // 공유 회수 또는 나가기
+      renameDraft = {renameDraft} // 그룹 이름 수정 입력
+      onRenameDraftChange = {setRenameDraft} // 그룹 이름 수정
+      savingName = {savingName} // 이름 저장 중
+      onRenameGroup = {handleRenameGroup} // 그룹 이름 저장
+      onDeleteGroup = {handleDeleteGroup} // 그룹 삭제
     />
   );
 };

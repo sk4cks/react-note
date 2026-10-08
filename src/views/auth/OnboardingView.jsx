@@ -11,16 +11,18 @@ const OnboardingView = () => {
   const [userId, setUserId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /** SNS 계정에 쓸 아이디를 등록하고 홈으로 간다. */
+  /** SNS 계정 아이디를 등록하고 홈으로 가는 완료. */
   const handleSubmit = async () => {
     if (!userId) {
       alert("아이디를 입력해 주세요.");
       return;
     }
+
     if (userId.length < 3) {
       alert("아이디는 3자 이상이어야 합니다.");
       return;
     }
+
     if (!USER_ID_PATTERN.test(userId)) {
       alert("아이디는 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.");
       return;
@@ -33,6 +35,7 @@ const OnboardingView = () => {
       if (!response.data?.access_token) {
         throw new Error("access_token missing");
       }
+
       navigate("/");
 
     } catch (error) {
@@ -54,10 +57,10 @@ const OnboardingView = () => {
 
   return (
     <Onboarding
-      userId={userId}
-      setUserId={setUserId}
-      handleSubmit={handleSubmit}
-      isSubmitting={isSubmitting}
+      userId = {userId} // 고른 아이디
+      setUserId = {setUserId} // 아이디 수정
+      handleSubmit = {handleSubmit} // 아이디 등록
+      isSubmitting = {isSubmitting} // 등록 요청 중
     />
   );
 };

@@ -6,8 +6,11 @@ const Layout = () => {
   
   return (
     <>
+
+      {/* 상단 바 */}
       <NavigationBarView />
-      
+
+      {/* 아래 화면 */}
       <Outlet />
     </>
   );

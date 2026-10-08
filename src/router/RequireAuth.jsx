@@ -5,9 +5,9 @@ import { getAccessToken, hasSessionHint } from "@/api/httpClient.js";
 const RequireAuth = () => {
   const location = useLocation();
 
-  // access token이 없어도 refresh cookie 힌트가 있으면 통과한다.
+  // access token이 없어도 refresh cookie 힌트가 있으면 통과.
   if (!getAccessToken() && !hasSessionHint()) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/login" replace state = {{ from: location }} />;
   }
 
   return <Outlet />;

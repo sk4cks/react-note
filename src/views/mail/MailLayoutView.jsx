@@ -41,13 +41,13 @@ const MailLayoutView = () => {
 
   return (
     <MailLayout
-      folders={mailFolders}
-      folderCounts={folderCounts}
-      activeFolder={activeFolder}
-      pathname={location.pathname}
-      onCompose={() => navigate("/mail/compose")}
-      onSelectFolder={(folder) => navigate("/mail", { state: { folder } })}
-      onContacts={() => navigate("/mail/contacts")}
+      folders = {mailFolders} // 받은·보낸·임시·휴지통
+      folderCounts = {folderCounts} // 폴더 id별 뱃지 건수
+      activeFolder = {activeFolder} // 지금 선택된 편지함
+      pathname = {location.pathname} // 주소록 화면인지 구분
+      onCompose = {() => navigate("/mail/compose")} // 메일 쓰기
+      onSelectFolder = {(folder) => navigate("/mail", { state: { folder } })} // 편지함 이동
+      onContacts = {() => navigate("/mail/contacts")} // 주소록 이동
     />
   );
 };

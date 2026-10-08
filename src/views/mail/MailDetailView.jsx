@@ -10,7 +10,7 @@ const MailDetailView = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
-  /** IMAP UID는 폴더별로 달라 목록에서 넘어온 폴더로 조회해야 한다. */
+  /** 폴더마다 다른 IMAP UID라, 목록에서 넘어온 폴더로 하는 조회. */
   const activeFolder = location.state?.folder ?? "inbox";
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,8 @@ const MailDetailView = () => {
     if (activeFolder === "draft") {
       return;
     }
-    let cancelled = false; // 메일을 바꾸면 이전 응답은 버린다.
+
+    let cancelled = false; // 메일을 바꾸면 버리는 이전 응답.
     setLoading(true);
     setError(null);
 
@@ -38,7 +39,8 @@ const MailDetailView = () => {
             setMessage(null);
             return;
           }
-          // Gmail 미연동은 재로그인 안내, 그 외는 일반 오류.
+
+          // Gmail 미연동은 재로그인 안내, 그 외는 일반 오류로 보는 분기.
           const code = err.response?.data?.code;
           setError(code === "MAIL_GOOGLE_NOT_LINKED" ? "google" : "generic");
         }
@@ -54,7 +56,7 @@ const MailDetailView = () => {
     };
   }, [id, activeFolder]);
 
-  /** 첨부 파일을 내려받는다. */
+  /** 첨부 파일 다운로드. */
   const handleDownloadAttachment = async (attachment) => {
     const response = await API.mailAPI.downloadAttachment(
       id,
@@ -62,7 +64,7 @@ const MailDetailView = () => {
       activeFolder
     );
 
-    // blob URL을 만들어 <a download>로 저장한다.
+    // blob URL로 받는 다운로드.
     const url = URL.createObjectURL(response.data);
     const link = document.createElement("a");
     link.href = url;
@@ -71,7 +73,7 @@ const MailDetailView = () => {
     URL.revokeObjectURL(url);
   };
 
-  /** 휴지통이 아니면 휴지통으로, 휴지통이면 완전히 지운다. */
+  /** 휴지통이 아니면 휴지통으로 옮기고, 휴지통이면 완전히 지우는 삭제. */
   const handleDelete = async () => {
     if (deleting) {
       return;
@@ -98,7 +100,7 @@ const MailDetailView = () => {
     }
   };
 
-  /** 휴지통 메일을 원래 편지함으로 되돌린다. */
+  /** 휴지통 메일을 원래 편지함으로 되돌리는 복원. */
   const handleRestore = async () => {
     if (deleting) {
       return;
@@ -119,7 +121,7 @@ const MailDetailView = () => {
   };
 
   if (activeFolder === "draft") {
-    return <Navigate to={`/mail/compose?draftId=${encodeURIComponent(id)}`} replace />;
+    return <Navigate to = {`/mail/compose?draftId=${encodeURIComponent(id)}`} replace />;
   }
 
   if (!loading && !error && !message) {
@@ -128,21 +130,21 @@ const MailDetailView = () => {
 
   return (
     <MailDetail
-      loading={loading}
-      error={error}
-      onGoogleLogin={() => startSnsLogin("google")}
-      message={message}
-      onDownloadAttachment={handleDownloadAttachment}
-      onBack={() =>
+      loading = {loading} // 본문 조회 중
+      error = {error} // google | generic | delete | restore
+      onGoogleLogin = {() => startSnsLogin("google")} // Gmail 미연동 때 다시 로그인
+      message = {message} // 제목·본문·첨부
+      onDownloadAttachment = {handleDownloadAttachment} // 첨부 다운로드
+      onBack = {() =>
         navigate("/mail", {
           state: {
             folder: activeFolder,
-            // 읽음 처리된 메일은 목록·뱃지도 바로 맞춘다.
+            // 읽음 처리된 메일의 목록·뱃지 반영.
             ...(message?.unread ? {} : { readMessageId: id, refreshFolders: true }),
           },
         })
-      }
-      onReply={() =>
+      } // 목록으로
+      onReply = {() =>
         navigate("/mail/compose", {
           state: {
             to: message.fromEmail,
@@ -151,11 +153,11 @@ const MailDetailView = () => {
               : `Re: ${message.subject}`,
           },
         })
-      }
-      onDelete={handleDelete}
-      onRestore={handleRestore}
-      deleting={deleting}
-      folder={activeFolder}
+      } // 답장 작성
+      onDelete = {handleDelete} // 삭제
+      onRestore = {handleRestore} // 휴지통에서 복원
+      deleting = {deleting} // 삭제·복원 요청 중
+      folder = {activeFolder} // 이 메일이 있던 편지함
     />
   );
 };

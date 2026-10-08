@@ -10,7 +10,7 @@ const LoginView = () => {
   const [userInfo, setUserInfo] = useState({ userId: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /** 아이디·비밀번호로 로그인한다. */
+  /** 아이디·비밀번호 로그인. */
   const handleLogin = async () => {
     if (!userInfo.userId || !userInfo.password) {
       alert("아이디와 비밀번호를 입력해 주세요.");
@@ -37,7 +37,7 @@ const LoginView = () => {
     }
   };
 
-  /** Google/Kakao/Naver OAuth를 시작한다. */
+  /** Google, Kakao, Naver OAuth 시작. */
   const handleSnsLogin = async (provider) => {
     try {
       await startSnsLogin(provider);
@@ -50,11 +50,11 @@ const LoginView = () => {
 
   return (
     <Login
-      userInfo={userInfo}
-      setUserInfo={setUserInfo}
-      handleLogin={handleLogin}
-      onSnsLogin={handleSnsLogin}
-      isSubmitting={isSubmitting}
+      userInfo = {userInfo} // 아이디·비밀번호
+      setUserInfo = {setUserInfo} // 입력 수정
+      handleLogin = {handleLogin} // 로컬 로그인
+      onSnsLogin = {handleSnsLogin} // SNS 로그인 시작
+      isSubmitting = {isSubmitting} // 로그인 요청 중
     />
   );
 };
