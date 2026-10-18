@@ -238,6 +238,142 @@ textarea.mail-compose-source {
   box-shadow: 0 0 0 2px var(--bs-primary);
 }
 
+.mail-compose-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.mail-compose-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mail-subject-suggest {
+  position: relative;
+  background: #fff;
+  border-radius: var(--bs-border-radius);
+}
+
+.mail-subject-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid transparent;
+  pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.mail-subject-suggest .form-control {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+}
+
+.mail-subject-ghost .is-typed {
+  visibility: hidden;
+}
+
+.mail-subject-ghost .is-hint {
+  color: #9aa0a6;
+}
+
+.mail-compose-editor-wrap {
+  position: relative;
+}
+
+.mail-compose-inline-ghost {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  max-width: 70%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9aa0a6;
+  font: inherit;
+  line-height: 1;
+  white-space: pre;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.mail-compose-chat {
+  width: 320px;
+  flex: none;
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100vh - 7rem);
+  padding: 0.9rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.mail-compose-chat-title {
+  font-weight: 600;
+}
+
+.mail-compose-chat-log {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 180px;
+}
+
+.mail-compose-chat-empty {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.mail-compose-chat-bubble {
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.6rem;
+  white-space: pre-wrap;
+  font-size: 0.92rem;
+}
+
+.mail-compose-chat-bubble.is-user {
+  align-self: flex-end;
+  background: #e7f1ff;
+}
+
+.mail-compose-chat-bubble.is-assistant {
+  align-self: flex-start;
+  background: #f4f5f7;
+}
+
+.mail-compose-chat-apply {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 992px) {
+  .mail-compose-layout {
+    flex-direction: column;
+  }
+
+  .mail-compose-chat {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}
+
 .mail-recipient-field {
   display: flex;
   flex-wrap: wrap;

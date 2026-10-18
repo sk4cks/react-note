@@ -11,6 +11,7 @@ import {
   mailPayloadBytes,
   readFileAsDataUrl,
 } from "../../utils/mailAttachment";
+import MailComposeChat from "./MailComposeChat";
 import MailRecipientField from "./MailRecipientField";
 
 const TOOLBAR_CONTAINER = [
@@ -96,8 +97,20 @@ const MailCompose = ({
   error = null, // google | generic | load | 서버 메시지
   saveStatus = "idle", // idle | saving | saved | error
   loading = false, // 초안 조회 중
+  suggestion = null, // { field, text } 커서 뒤 회색 이어쓰기
+  onAcceptSuggestion, // Tab·클릭으로 추천 반영
+  onDismissSuggestion, // Esc로 추천 닫기
+  chatMessages = [], // 옆 채팅
+  chatInput = "", // 채팅 입력
+  onChatInput, // 채팅 입력 수정
+  onChatSend, // 채팅 전송
+  chatSending = false, // 채팅 답변 대기
+  onApplySubject, // 말풍선을 제목으로
+  onApplyBody, // 말풍선을 본문 뒤에
 }) => {
   const quillRef = useRef(null); // ReactQuill
+  const [ghostPos, setGhostPos] = useState(null); // 본문 회색 추천 좌표
+  const [subjectAtEnd, setSubjectAtEnd] = useState(true); // 제목 커서가 끝일 때만 회색 추천
   const fileInputRef = useRef(null); // 숨긴 첨부 파일 input
   const formRef = useRef(form); // 최신 form. 이미지 넣을 때 읽음
   const attachmentsRef = useRef(attachments); // 최신 첨부. 콜백에서 읽음
@@ -350,6 +363,151 @@ const MailCompose = ({
     await addAttachmentFiles(files);
   };
 
+  const acceptGhostRef = useRef(() => {});
+
+  /** 회색 추천을 커서 위치에 붙인 뒤 닫기. */
+  const acceptGhost = (event) => {
+    if (!suggestion?.text) {
+      return;
+    }
+
+    if (suggestion.field === "subject") {
+      const current = form.subject ?? "";
+      const start = event?.target?.selectionStart ?? current.length;
+      const end = event?.target?.selectionEnd ?? start;
+      const next = `${current.slice(0, start)}${suggestion.text}${current.slice(end)}`;
+      const caret = start + suggestion.text.length;
+      const input = event?.target;
+
+      onChange("subject", next);
+      onAcceptSuggestion?.();
+      window.requestAnimationFrame(() => {
+        input?.setSelectionRange?.(caret, caret);
+      });
+
+      return;
+    }
+
+    const quill = quillRef.current?.getEditor?.();
+    const range = quill?.getSelection(true);
+
+    if (quill && range) {
+      quill.insertText(range.index, suggestion.text, "user");
+      quill.setSelection(range.index + suggestion.text.length, 0, "silent");
+    }
+
+    onAcceptSuggestion?.();
+  };
+
+  acceptGhostRef.current = acceptGhost;
+
+  /** 본문 커서 옆에 회색 추천을 붙이는 위치 계산. */
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor?.();
+
+    if (!quill || suggestion?.field !== "body" || !suggestion.text || sourceMode) {
+      setGhostPos(null);
+
+      return undefined;
+    }
+
+    const place = (range = quill.getSelection()) => {
+      const atEnd = range && range.index >= quill.getLength() - 1;
+      const bounds = atEnd ? quill.getBounds(range.index) : null;
+      const container = quill.container;
+
+      if (!bounds || !container) {
+        setGhostPos(null);
+
+        return;
+      }
+
+      setGhostPos({
+        top: container.offsetTop + bounds.top,
+        left: container.offsetLeft + bounds.left,
+        height: bounds.height,
+      });
+    };
+
+    const handleSelection = (range) => {
+      place(range);
+    };
+
+    place();
+    quill.on("selection-change", handleSelection);
+
+    return () => quill.off("selection-change", handleSelection);
+  }, [suggestion, sourceMode, form.body]);
+
+  /** Tab이면 추천 반영, Esc면 닫기. */
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor?.();
+
+    if (!quill) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (suggestion?.field !== "body" || !suggestion.text) {
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const range = quill.getSelection();
+
+        if (!range || range.index < quill.getLength() - 1) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        acceptGhostRef.current();
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onDismissSuggestion?.();
+      }
+    };
+
+    quill.root.addEventListener("keydown", handleKeyDown, true);
+
+    return () => quill.root.removeEventListener("keydown", handleKeyDown, true);
+  }, [suggestion, onDismissSuggestion]);
+
+  /** 제목 커서가 끝이면 그 앞 글, 아니면 추천 숨김. */
+  const subjectPrefix = (event) => {
+    const value = event.target.value ?? "";
+    const caret = event.target.selectionStart ?? value.length;
+    const atEnd = caret === value.length;
+
+    setSubjectAtEnd(atEnd);
+
+    return atEnd ? value.slice(0, caret) : false;
+  };
+
+  /** 제목에서 Tab이면 추천 반영. */
+  const handleSubjectKeyDown = (event) => {
+    if (suggestion?.field !== "subject" || !suggestion.text) {
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const value = event.target.value ?? "";
+
+      if ((event.target.selectionStart ?? 0) !== value.length) {
+        return;
+      }
+
+      event.preventDefault();
+      acceptGhost(event);
+    }
+
+    if (event.key === "Escape") {
+      onDismissSuggestion?.();
+    }
+  };
+
   /** 첨부 칩 삭제. */
   const removeAttachment = (id) => {
     onAttachmentsChange(attachments.filter((item) => item.id !== id));
@@ -382,6 +540,8 @@ const MailCompose = ({
         </Alert>
       )}
 
+      <div className="mail-compose-layout">
+      <div className="mail-compose-main">
       <Card
         className = {`mail-compose-card${fileDrag ? " mail-compose-drop-active" : ""}`}
         onDragEnter = {handleFileDragEnter}
@@ -451,13 +611,26 @@ const MailCompose = ({
           {/* 제목 */}
           <Form.Group className="mb-3" controlId="mailSubject">
             <Form.Label>제목</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="제목"
-              value = {form.subject}
-              onChange = {(e) => onChange("subject", e.target.value)}
-              required
-            />
+            <div className="mail-subject-suggest">
+              {suggestion?.field === "subject" && suggestion.text && subjectAtEnd && (
+                <div className="mail-subject-ghost" aria-hidden="true">
+                  <span className="is-typed">{form.subject}</span>
+                  <span className="is-hint">{suggestion.text}</span>
+                </div>
+              )}
+              <Form.Control
+                type="text"
+                placeholder="제목"
+                value = {form.subject}
+                onChange = {(e) => onChange("subject", e.target.value, subjectPrefix(e))}
+                onSelect = {(e) => onChange("subject", e.target.value, subjectPrefix(e))}
+                onKeyDown = {handleSubjectKeyDown}
+                required
+              />
+            </div>
+            {suggestion?.field === "subject" && suggestion.text && subjectAtEnd && (
+              <Form.Text muted>Tab으로 이어 쓰기</Form.Text>
+            )}
           </Form.Group>
 
           {/* 본문 */}
@@ -495,16 +668,44 @@ const MailCompose = ({
             </div>
 
             {/* 탭을 오가도 Quill을 다시 마운트하지 않는 숨김 */}
-            <div className = {sourceMode ? "d-none" : undefined}>
+            <div className = {sourceMode ? "d-none" : "mail-compose-editor-wrap"}>
               <ReactQuill
                 ref = {quillRef}
                 theme="snow"
                 className="mail-compose-editor"
                 value = {form.body}
-                onChange = {(html) => onChange("body", html)}
+                onChange = {(html, _delta, source, editor) => {
+                  if (source !== "user") {
+                    onChange("body", html, null);
+
+                    return;
+                  }
+
+                  const range = editor?.getSelection?.();
+                  const length = editor?.getLength?.() ?? 1;
+                  const atEnd = !range || range.index >= length - 1;
+                  const prefix = atEnd
+                    ? editor.getText(0, range ? range.index : length - 1)
+                    : false;
+
+                  onChange("body", html, prefix);
+                }}
                 modules = {modules}
                 placeholder="메일 내용"
               />
+              {ghostPos && suggestion?.field === "body" && suggestion.text && (
+                <button
+                  type="button"
+                  className="mail-compose-inline-ghost"
+                  style = {{ top: ghostPos.top, left: ghostPos.left, height: ghostPos.height }}
+                  onMouseDown = {(event) => {
+                    event.preventDefault();
+                    acceptGhost();
+                  }}
+                >
+                  {suggestion.text}
+                </button>
+              )}
             </div>
             {sourceMode && (
               <>
@@ -590,6 +791,19 @@ const MailCompose = ({
         </Form>
         </Card.Body>
       </Card>
+      </div>
+
+      {/* 옆 채팅 */}
+      <MailComposeChat
+        messages = {chatMessages}
+        input = {chatInput}
+        onInput = {onChatInput}
+        onSend = {onChatSend}
+        sending = {chatSending}
+        onApplySubject = {onApplySubject}
+        onApplyBody = {onApplyBody}
+      />
+      </div>
     </>
   );
 };

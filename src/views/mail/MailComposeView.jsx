@@ -1,3 +1,10 @@
+/** HTML을 채팅·본문에 넣을 때 태그를 문자로 바꾸는 이스케이프. */
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
 /** 메일 쓰기. 왼쪽 메일 쓰기 / 메일 상세 > 답장 / 임시보관함 > 초안. */
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -11,6 +18,7 @@ import {
 import { sanitizeMailHtml } from "../../utils/sanitizeMailHtml";
 
 const AUTOSAVE_MS = 2000;
+const SUGGEST_MS = 450;
 const DRAFT_ID_SESSION_KEY="mailComposeDraftId";
 const DRAFT_SNAPSHOT_KEY="mailComposeSnapshot";
 const HIDE_SAVE_MS = 200;
@@ -97,6 +105,10 @@ const MailComposeView = () => {
   const [draftId, setDraftId] = useState(draftIdFromRoute);
   const [loadingDraft, setLoadingDraft] = useState(Boolean(draftIdFromRoute));
   const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved | error
+  const [suggestion, setSuggestion] = useState(null); // { field, text }
+  const [chatMessages, setChatMessages] = useState([]); // 옆 채팅
+  const [chatInput, setChatInput] = useState("");
+  const [chatSending, setChatSending] = useState(false);
 
   const formRef = useRef(form);
   const attachmentsRef = useRef(attachments);
@@ -113,6 +125,8 @@ const MailComposeView = () => {
   const loadedIdRef = useRef(null);
   const saveDraftRef = useRef(async () => null);
   const abortRef = useRef(null);
+  const suggestTimerRef = useRef(null);
+  const suggestAbortRef = useRef(null);
 
   formRef.current = form;
   attachmentsRef.current = attachments;
@@ -120,8 +134,8 @@ const MailComposeView = () => {
   sendingRef.current = sending;
   loadingDraftRef.current = loadingDraft;
 
-  /** 작성 폼 한 칸 수정. */
-  const handleChange = (field, value) => {
+  /** 작성 폼 한 칸 수정. prefix는 커서 앞 글. false면 추천 숨김. */
+  const handleChange = (field, value, prefix) => {
     setForm((prev) => {
       if (prev[field] === value) {
         return prev;
@@ -134,6 +148,119 @@ const MailComposeView = () => {
 
       return { ...prev, [field]: value };
     });
+
+    if (field === "subject" || field === "body") {
+      scheduleSuggest(field, value, prefix);
+    }
+  };
+
+  /** 입력이 잠시 멈추면 커서 뒤 이어쓰기 조회. prefix가 false면 숨김. */
+  const scheduleSuggest = (field, value, prefix) => {
+    window.clearTimeout(suggestTimerRef.current);
+
+    if (prefix === false) {
+      suggestAbortRef.current?.abort();
+      setSuggestion(null);
+
+      return;
+    }
+
+    if (prefix === null) {
+      return;
+    }
+
+    const raw = prefix != null ? String(prefix) : (value ?? "");
+    const plain = raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+    if (plain.length < 2 || ignoreChangesRef.current) {
+      setSuggestion(null);
+
+      return;
+    }
+
+    suggestTimerRef.current = window.setTimeout(async () => {
+      suggestAbortRef.current?.abort();
+      const controller = new AbortController();
+      suggestAbortRef.current = controller;
+      const current = formRef.current;
+
+      try {
+        const response = await API.mailAPI.completeMail(
+          {
+            field,
+            text: plain,
+            subject: field === "subject" ? value : current.subject,
+            body: field === "body" ? value : current.body,
+          },
+          { signal: controller.signal }
+        );
+        const text = (response.data?.suggestion ?? "").replace(/\s+$/u, "");
+
+        setSuggestion(text.trim() ? { field, text } : null);
+
+      } catch (err) {
+        if (err?.code !== "ERR_CANCELED") {
+          setSuggestion(null);
+        }
+      }
+    }, SUGGEST_MS);
+  };
+
+  /** Tab·클릭으로 회색 추천을 비우는 닫기. 붙이기는 작성 폼. */
+  const acceptSuggestion = () => {
+    setSuggestion(null);
+  };
+
+  /** 회색 추천 닫기. */
+  const dismissSuggestion = () => {
+    setSuggestion(null);
+  };
+
+  /** 채팅 전송. 실패 메시지도 말풍선으로 표시. */
+  const sendChat = async () => {
+    const content = chatInput.trim();
+
+    if (!content || chatSending) {
+      return;
+    }
+
+    const nextMessages = [...chatMessages, { role: "user", content }];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setChatSending(true);
+
+    try {
+      const response = await API.mailAPI.chatMail({
+        messages: nextMessages,
+        subject: formRef.current.subject,
+        body: formRef.current.body,
+      });
+      const message = (response.data?.message ?? "").trim() || "답이 비어 있습니다.";
+
+      setChatMessages((prev) => [...prev, { role: "assistant", content: message }]);
+
+    } catch (err) {
+      const message = err.response?.data?.message || "AI 응답을 받지 못했습니다.";
+
+      setChatMessages((prev) => [...prev, { role: "assistant", content: message }]);
+
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  /** 말풍선을 제목으로 넣는 반영. */
+  const applyChatSubject = (text) => {
+    handleChange("subject", String(text ?? "").replace(/\s+/g, " ").trim());
+  };
+
+  /** 말풍선을 본문 뒤에 붙이는 반영. */
+  const applyChatBody = (text) => {
+    const current = formRef.current.body ?? "";
+    const addition = `<p>${escapeHtml(text)}</p>`;
+    const next = !current || current === "<p><br></p>" ? addition : `${current}${addition}`;
+
+    handleChange("body", next);
   };
 
   /** 첨부 목록 수정. */
@@ -527,6 +654,16 @@ const MailComposeView = () => {
       error = {error} // google | generic | load | 서버 메시지
       saveStatus = {saveStatus} // idle | saving | saved | error
       loading = {loadingDraft} // 초안 조회 중
+      suggestion = {suggestion} // 커서 뒤 회색 이어쓰기
+      onAcceptSuggestion = {acceptSuggestion} // Tab·클릭으로 추천 반영
+      onDismissSuggestion = {dismissSuggestion} // Esc로 추천 닫기
+      chatMessages = {chatMessages} // 옆 채팅
+      chatInput = {chatInput} // 채팅 입력
+      onChatInput = {setChatInput} // 채팅 입력 수정
+      onChatSend = {sendChat} // 채팅 전송
+      chatSending = {chatSending} // 채팅 답변 대기
+      onApplySubject = {applyChatSubject} // 말풍선을 제목으로
+      onApplyBody = {applyChatBody} // 말풍선을 본문 뒤에
     />
   );
 };

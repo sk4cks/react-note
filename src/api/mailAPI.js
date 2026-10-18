@@ -39,6 +39,14 @@ const mailAPI = {
   saveDraft: (payload, config) =>
     httpClient.post("/api/mail/drafts", payload, config),
 
+  /** 제목·본문 커서 뒤 짧은 이어쓰기. */
+  completeMail: (payload, config) =>
+    httpClient.post("/api/mail/ai/complete", payload, config),
+
+  /** 작성 화면 옆 채팅. */
+  chatMail: (payload) =>
+    httpClient.post("/api/mail/ai/chat", payload),
+
   /** 페이지가 사라져도 요청이 남는, 창을 닫을 때의 임시저장. */
   saveDraftKeepalive: async (payload) => {
     const token = getAccessToken();
