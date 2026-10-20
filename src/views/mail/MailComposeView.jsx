@@ -236,8 +236,10 @@ const MailComposeView = () => {
         body: formRef.current.body,
       });
       const message = (response.data?.message ?? "").trim() || "답이 비어 있습니다.";
+      const subject = (response.data?.subject ?? "").trim();
+      const body = (response.data?.body ?? "").trim();
 
-      setChatMessages((prev) => [...prev, { role: "assistant", content: message }]);
+      setChatMessages((prev) => [...prev, { role: "assistant", content: message, subject, body }]);
 
     } catch (err) {
       const message = err.response?.data?.message || "AI 응답을 받지 못했습니다.";
