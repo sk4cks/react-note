@@ -86,7 +86,7 @@ const MailComposeChat = ({
                     variant="link"
                     size="sm"
                     className="p-0"
-                    onClick = {() => onApplyBody(message.body)}
+                    onClick = {() => onApplyBody(message.body, Boolean(message.subject))}
                   >
                     본문에 넣기
                   </Button>

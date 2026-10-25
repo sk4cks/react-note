@@ -251,18 +251,29 @@ const MailComposeView = () => {
     }
   };
 
-  /** 말풍선을 제목으로 넣는 반영. */
+  /** 말풍선 제목만 제목 칸에 넣기. 넣는 직후 이어쓰기는 띄우지 않음. */
   const applyChatSubject = (text) => {
-    handleChange("subject", String(text ?? "").replace(/\s+/g, " ").trim());
+    handleChange("subject", String(text ?? "").replace(/\s+/g, " ").trim(), false);
   };
 
-  /** 말풍선을 본문 뒤에 붙이는 반영. */
-  const applyChatBody = (text) => {
+  /** 말풍선 본문을 내용에 넣기. 제목이 있으면 통째로 교체. */
+  const applyChatBody = (text, replace) => {
     const current = formRef.current.body ?? "";
-    const addition = `<p>${escapeHtml(text)}</p>`;
-    const next = !current || current === "<p><br></p>" ? addition : `${current}${addition}`;
+    const addition = String(text ?? "")
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => `<p>${escapeHtml(line)}</p>`)
+      .join("");
 
-    handleChange("body", next);
+    if (!addition) {
+      return;
+    }
+
+    const empty = !current || current === "<p><br></p>";
+    const next = replace || empty ? addition : `${current}${addition}`;
+
+    handleChange("body", next, false);
   };
 
   /** 첨부 목록 수정. */
